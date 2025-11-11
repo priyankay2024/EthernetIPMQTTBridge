@@ -1,0 +1,196 @@
+from flask import Flask, render_template, jsonify, request
+from pycomm3 import LogixDriver
+import paho.mqtt.client as mqtt
+from dotenv import load_dotenv
+import os
+import threading
+import time
+import json
+from datetime import datetime
+
+load_dotenv()
+
+app = Flask(__name__)
+
+class EthernetIPMQTTBridge:
+    def __init__(self):
+        self.ethernetip_host = os.getenv('ETHERNETIP_HOST', '192.168.1.10')
+        self.ethernetip_slot = int(os.getenv('ETHERNETIP_SLOT', '0'))
+        self.tags = os.getenv('ETHERNETIP_TAGS', '').split(',')
+        self.mqtt_broker = os.getenv('MQTT_BROKER', 'broker.hivemq.com')
+        self.mqtt_port = int(os.getenv('MQTT_PORT', '1883'))
+        self.mqtt_topic_prefix = os.getenv('MQTT_TOPIC_PREFIX', 'ethernetip/')
+        self.mqtt_client_id = os.getenv('MQTT_CLIENT_ID', 'ethernetip_bridge')
+        self.poll_interval = float(os.getenv('POLL_INTERVAL', '1.0'))
+        
+        self.running = False
+        self.ethernetip_connected = False
+        self.mqtt_connected = False
+        self.last_data = {}
+        self.last_error = None
+        self.message_count = 0
+        self.last_update = None
+        
+        self.mqtt_client = mqtt.Client(client_id=self.mqtt_client_id)
+        self.mqtt_client.on_connect = self.on_mqtt_connect
+        self.mqtt_client.on_disconnect = self.on_mqtt_disconnect
+        
+    def on_mqtt_connect(self, client, userdata, flags, rc):
+        if rc == 0:
+            self.mqtt_connected = True
+            self.last_error = None
+            print(f"Connected to MQTT broker: {self.mqtt_broker}")
+        else:
+            self.mqtt_connected = False
+            self.last_error = f"MQTT connection failed with code {rc}"
+            print(self.last_error)
+    
+    def on_mqtt_disconnect(self, client, userdata, rc):
+        self.mqtt_connected = False
+        print("Disconnected from MQTT broker")
+        
+    def connect_mqtt(self):
+        try:
+            self.mqtt_client.connect(self.mqtt_broker, self.mqtt_port, 60)
+            self.mqtt_client.loop_start()
+            return True
+        except Exception as e:
+            self.last_error = f"MQTT connection error: {str(e)}"
+            print(self.last_error)
+            return False
+    
+    def read_ethernetip_tags(self):
+        try:
+            with LogixDriver(self.ethernetip_host, slot=self.ethernetip_slot) as plc:
+                self.ethernetip_connected = True
+                results = {}
+                
+                for tag in self.tags:
+                    tag = tag.strip()
+                    if not tag:
+                        continue
+                    
+                    result = plc.read(tag)
+                    if result.error:
+                        results[tag] = {'error': result.error}
+                    else:
+                        results[tag] = {'value': result.value, 'type': str(result.type)}
+                
+                return results
+        except Exception as e:
+            self.ethernetip_connected = False
+            self.last_error = f"EthernetIP error: {str(e)}"
+            print(self.last_error)
+            return None
+    
+    def publish_to_mqtt(self, data):
+        if not self.mqtt_connected:
+            return
+        
+        for tag, value in data.items():
+            if 'error' in value:
+                continue
+            
+            topic = f"{self.mqtt_topic_prefix}{tag}"
+            payload = json.dumps({
+                'value': value['value'],
+                'type': value['type'],
+                'timestamp': datetime.now().isoformat()
+            })
+            
+            try:
+                self.mqtt_client.publish(topic, payload, qos=1)
+                self.message_count += 1
+            except Exception as e:
+                self.last_error = f"MQTT publish error: {str(e)}"
+                print(self.last_error)
+    
+    def run(self):
+        self.running = True
+        self.connect_mqtt()
+        
+        while self.running:
+            data = self.read_ethernetip_tags()
+            
+            if data:
+                self.last_data = data
+                self.publish_to_mqtt(data)
+                self.last_update = datetime.now().isoformat()
+            
+            time.sleep(self.poll_interval)
+    
+    def start(self):
+        if not self.running:
+            thread = threading.Thread(target=self.run, daemon=True)
+            thread.start()
+    
+    def stop(self):
+        self.running = False
+        self.mqtt_client.loop_stop()
+        self.mqtt_client.disconnect()
+    
+    def get_status(self):
+        return {
+            'running': self.running,
+            'ethernetip_connected': self.ethernetip_connected,
+            'mqtt_connected': self.mqtt_connected,
+            'ethernetip_host': self.ethernetip_host,
+            'mqtt_broker': self.mqtt_broker,
+            'tags': [t.strip() for t in self.tags if t.strip()],
+            'last_data': self.last_data,
+            'last_error': self.last_error,
+            'message_count': self.message_count,
+            'last_update': self.last_update,
+            'poll_interval': self.poll_interval
+        }
+
+bridge = EthernetIPMQTTBridge()
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/status')
+def get_status():
+    return jsonify(bridge.get_status())
+
+@app.route('/api/start', methods=['POST'])
+def start_bridge():
+    bridge.start()
+    return jsonify({'success': True, 'message': 'Bridge started'})
+
+@app.route('/api/stop', methods=['POST'])
+def stop_bridge():
+    bridge.stop()
+    return jsonify({'success': True, 'message': 'Bridge stopped'})
+
+@app.route('/api/config', methods=['GET', 'POST'])
+def config():
+    if request.method == 'POST':
+        data = request.json
+        
+        if bridge.running:
+            return jsonify({'success': False, 'message': 'Stop the bridge before updating configuration'}), 400
+        
+        env_content = []
+        env_content.append(f"ETHERNETIP_HOST={data.get('ethernetip_host', bridge.ethernetip_host)}")
+        env_content.append(f"ETHERNETIP_SLOT={data.get('ethernetip_slot', bridge.ethernetip_slot)}")
+        env_content.append(f"ETHERNETIP_TAGS={data.get('ethernetip_tags', ','.join(bridge.tags))}")
+        env_content.append(f"MQTT_BROKER={data.get('mqtt_broker', bridge.mqtt_broker)}")
+        env_content.append(f"MQTT_PORT={data.get('mqtt_port', bridge.mqtt_port)}")
+        env_content.append(f"MQTT_TOPIC_PREFIX={data.get('mqtt_topic_prefix', bridge.mqtt_topic_prefix)}")
+        env_content.append(f"MQTT_CLIENT_ID={data.get('mqtt_client_id', bridge.mqtt_client_id)}")
+        env_content.append(f"POLL_INTERVAL={data.get('poll_interval', bridge.poll_interval)}")
+        
+        try:
+            with open('.env', 'w') as f:
+                f.write('\n'.join(env_content))
+            
+            return jsonify({'success': True, 'message': 'Configuration saved. Restart the application to apply changes.'})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+    
+    return jsonify(bridge.get_status())
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=False)
