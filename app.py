@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request
-from pycomm3 import LogixDriver
+from cpppo.server.enip import client
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 import os
@@ -61,22 +61,32 @@ class EthernetIPMQTTBridge:
     
     def read_ethernetip_tags(self):
         try:
-            with LogixDriver(self.ethernetip_host, slot=self.ethernetip_slot) as plc:
-                self.ethernetip_connected = True
-                results = {}
-                
-                for tag in self.tags:
-                    tag = tag.strip()
-                    if not tag:
-                        continue
-                    
-                    result = plc.read(tag)
-                    if result.error:
-                        results[tag] = {'error': result.error}
-                    else:
-                        results[tag] = {'value': result.value, 'type': str(result.type)}
-                
+            results = {}
+            cleaned_tags = [tag.strip() for tag in self.tags if tag.strip()]
+            
+            if not cleaned_tags:
                 return results
+            
+            with client.connector(host=self.ethernetip_host, timeout=5.0) as connection:
+                operations = client.parse_operations(cleaned_tags)
+                
+                for index, descr, op, reply, status, value in connection.synchronous(
+                    operations=operations
+                ):
+                    tag_name = descr.split('=')[0].strip()
+                    
+                    if not status:
+                        results[tag_name] = {'error': 'Read failed'}
+                    else:
+                        value_type = type(value).__name__
+                        if isinstance(value, list):
+                            value_type = f"array[{len(value)}]"
+                        
+                        results[tag_name] = {'value': value, 'type': value_type}
+                
+                self.ethernetip_connected = True
+                return results
+                
         except Exception as e:
             self.ethernetip_connected = False
             self.last_error = f"EthernetIP error: {str(e)}"

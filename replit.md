@@ -10,10 +10,11 @@ A Python Flask application that bridges EthernetIP devices (PLCs) to MQTT broker
 - Added configuration system with environment variables
 - Implemented MQTT reconnection logic with exponential backoff (5s to 60s)
 - Secured configuration - uses environment variables only (no file writing)
+- **Switched from pycomm3 to cpppo library** for better EthernetIP compatibility (November 11, 2025)
 
 ## Project Architecture
 - **Backend**: Flask application with threading for continuous data polling
-- **EthernetIP**: Uses pycomm3 library for PLC communication
+- **EthernetIP**: Uses cpppo library for PLC communication (supports ControlLogix, CompactLogix, MicroLogix, PowerFlex)
 - **MQTT**: Uses paho-mqtt client for message publishing
 - **Frontend**: Bootstrap 5 with vanilla JavaScript for status updates
 
@@ -42,6 +43,19 @@ See `.env.example` for reference.
 
 ## Dependencies
 - Flask: Web framework
-- pycomm3: EthernetIP/CIP communication
+- cpppo: EthernetIP/CIP communication (v5.2.5)
 - paho-mqtt: MQTT client
 - python-dotenv: Environment configuration
+
+## EthernetIP Tag Formats
+cpppo supports various tag formats:
+- Simple tags: `"TagName"`, `"Motor_Speed"`
+- Array elements: `"Tag[5]"` (single element)
+- Array ranges: `"Tag[0-10]"` (range of elements)
+- CIP attributes: `"@Class/Instance/Attribute"` (e.g., `"@1/1/7"`)
+
+## Troubleshooting
+- Ensure your PLC is accessible on the network
+- Verify the correct IP address and slot number
+- Check that tag names match exactly (case-sensitive)
+- For simple devices (MicroLogix, PowerFlex), you may need to use CIP attribute format
