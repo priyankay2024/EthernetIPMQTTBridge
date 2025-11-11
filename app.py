@@ -65,7 +65,13 @@ class EthernetIPMQTTBridge:
             cleaned_tags = [tag.strip() for tag in self.tags if tag.strip()]
             
             if not cleaned_tags:
+                self.ethernetip_connected = False
+                self.last_error = "No tags configured. Please set ETHERNETIP_TAGS environment variable."
+                print(self.last_error)
                 return results
+            
+            print(f"Connecting to EthernetIP device at {self.ethernetip_host}...")
+            print(f"Reading tags: {cleaned_tags}")
             
             with client.connector(host=self.ethernetip_host, timeout=5.0) as connection:
                 operations = client.parse_operations(cleaned_tags)
@@ -77,14 +83,17 @@ class EthernetIPMQTTBridge:
                     
                     if not status:
                         results[tag_name] = {'error': 'Read failed'}
+                        print(f"Failed to read tag: {tag_name}")
                     else:
                         value_type = type(value).__name__
                         if isinstance(value, list):
                             value_type = f"array[{len(value)}]"
                         
                         results[tag_name] = {'value': value, 'type': value_type}
+                        print(f"Successfully read {tag_name}: {value}")
                 
                 self.ethernetip_connected = True
+                self.last_error = None
                 return results
                 
         except Exception as e:
