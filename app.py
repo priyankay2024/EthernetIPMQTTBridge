@@ -108,8 +108,19 @@ class EthernetIPMQTTBridge:
     def run(self):
         self.running = True
         self.connect_mqtt()
+        mqtt_retry_delay = 5
+        last_mqtt_attempt = 0
         
         while self.running:
+            if not self.mqtt_connected and (time.time() - last_mqtt_attempt) > mqtt_retry_delay:
+                print("Attempting to reconnect to MQTT broker...")
+                self.connect_mqtt()
+                last_mqtt_attempt = time.time()
+                mqtt_retry_delay = min(mqtt_retry_delay * 1.5, 60)
+            
+            if self.mqtt_connected:
+                mqtt_retry_delay = 5
+            
             data = self.read_ethernetip_tags()
             
             if data:
@@ -164,32 +175,8 @@ def stop_bridge():
     bridge.stop()
     return jsonify({'success': True, 'message': 'Bridge stopped'})
 
-@app.route('/api/config', methods=['GET', 'POST'])
+@app.route('/api/config', methods=['GET'])
 def config():
-    if request.method == 'POST':
-        data = request.json
-        
-        if bridge.running:
-            return jsonify({'success': False, 'message': 'Stop the bridge before updating configuration'}), 400
-        
-        env_content = []
-        env_content.append(f"ETHERNETIP_HOST={data.get('ethernetip_host', bridge.ethernetip_host)}")
-        env_content.append(f"ETHERNETIP_SLOT={data.get('ethernetip_slot', bridge.ethernetip_slot)}")
-        env_content.append(f"ETHERNETIP_TAGS={data.get('ethernetip_tags', ','.join(bridge.tags))}")
-        env_content.append(f"MQTT_BROKER={data.get('mqtt_broker', bridge.mqtt_broker)}")
-        env_content.append(f"MQTT_PORT={data.get('mqtt_port', bridge.mqtt_port)}")
-        env_content.append(f"MQTT_TOPIC_PREFIX={data.get('mqtt_topic_prefix', bridge.mqtt_topic_prefix)}")
-        env_content.append(f"MQTT_CLIENT_ID={data.get('mqtt_client_id', bridge.mqtt_client_id)}")
-        env_content.append(f"POLL_INTERVAL={data.get('poll_interval', bridge.poll_interval)}")
-        
-        try:
-            with open('.env', 'w') as f:
-                f.write('\n'.join(env_content))
-            
-            return jsonify({'success': True, 'message': 'Configuration saved. Restart the application to apply changes.'})
-        except Exception as e:
-            return jsonify({'success': False, 'message': str(e)}), 500
-    
     return jsonify(bridge.get_status())
 
 if __name__ == '__main__':

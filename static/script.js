@@ -97,55 +97,5 @@ document.getElementById('stop-btn').addEventListener('click', () => {
         });
 });
 
-document.getElementById('save-config-btn').addEventListener('click', () => {
-    const config = {
-        ethernetip_host: document.getElementById('config-ethernetip-host').value,
-        ethernetip_slot: document.getElementById('config-ethernetip-slot').value,
-        ethernetip_tags: document.getElementById('config-ethernetip-tags').value,
-        mqtt_broker: document.getElementById('config-mqtt-broker').value,
-        mqtt_port: document.getElementById('config-mqtt-port').value,
-        mqtt_topic_prefix: document.getElementById('config-mqtt-topic-prefix').value,
-        mqtt_client_id: document.getElementById('config-mqtt-client-id').value,
-        poll_interval: document.getElementById('config-poll-interval').value
-    };
-    
-    fetch('/api/config', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(config)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
-            updateStatus();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error saving configuration:', error);
-        alert('Error saving configuration');
-    });
-});
-
-document.getElementById('configModal').addEventListener('show.bs.modal', () => {
-    fetch('/api/config')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('config-ethernetip-host').value = data.ethernetip_host;
-            document.getElementById('config-ethernetip-slot').value = data.ethernetip_slot;
-            document.getElementById('config-ethernetip-tags').value = data.tags.join(',');
-            document.getElementById('config-mqtt-broker').value = data.mqtt_broker;
-            document.getElementById('config-mqtt-port').value = data.mqtt_port;
-            document.getElementById('config-mqtt-topic-prefix').value = data.mqtt_topic_prefix;
-            document.getElementById('config-mqtt-client-id').value = data.mqtt_client_id;
-            document.getElementById('config-poll-interval').value = data.poll_interval;
-        });
-});
-
 updateStatus();
 updateInterval = setInterval(updateStatus, 2000);
