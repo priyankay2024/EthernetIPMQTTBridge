@@ -1,33 +1,45 @@
 # EthernetIP to MQTT Bridge 🔌 → 📡
 
-A Python-based bridge that reads data from EthernetIP PLCs and publishes it to MQTT brokers. Perfect for industrial IoT applications!
+A Python-based bridge that reads data from **multiple EthernetIP PLCs simultaneously** and publishes to MQTT brokers. Perfect for industrial IoT applications!
 
 ## ✨ Features
 
-- 🔄 Real-time polling of EthernetIP tags
-- 📤 Automatic publishing to MQTT topics
-- 🌐 Web-based monitoring dashboard
-- 🎮 Easy start/stop controls
-- 📊 Live status and data visualization
+- 🔄 **Multi-Device Support** - Connect to unlimited EthernetIP devices
+- 📤 Real-time polling and MQTT publishing
+- 🌐 Web-based configuration and monitoring dashboard
+- 🎮 Individual device control (start/stop/edit/delete)
+- 📊 Live status and data visualization per device
 - 🧪 Built-in simulator for testing without hardware
+- ⚙️ Per-device configuration (tags, polling, topics)
+
+## 🎉 What's New in v2.0
+
+### Multi-Device Management
+- ✅ Connect to **multiple PLCs** simultaneously
+- ✅ Each device runs independently with its own configuration
+- ✅ Add/edit/delete devices through web interface
+- ✅ No restart required to change settings
+- ✅ Per-device error handling and status monitoring
+
+See **[CHANGELOG.md](CHANGELOG.md)** for full list of changes.
 
 ## 🚀 Quick Start
 
-### For Testing (No PLC Required)
+### Option 1: Testing with Simulator (No PLC Required)
 
 1. **Install dependencies:**
    ```powershell
    pip install -r requirements.txt
    ```
 
-2. **Copy environment config:**
+2. **Start simulator in one terminal:**
    ```powershell
-   Copy-Item .env.example .env
+   python ethernetip_simulator.py
    ```
 
-3. **Run with simulator:**
+3. **Start application in another terminal:**
    ```powershell
-   python app_with_simulator.py
+   python app.py
    ```
 
 4. **Open browser:**
@@ -35,37 +47,52 @@ A Python-based bridge that reads data from EthernetIP PLCs and publishes it to M
    http://localhost:5000
    ```
 
-5. **Click "Start Bridge"** and watch it work! 🎉
+5. **Add your first device:**
+   - Fill the "Add New Device" form:
+     - **Name**: `Simulator`
+     - **Host**: `127.0.0.1`
+     - **Tags**: `Tag1,Tag2,Tag3`
+   - Click "Add Device"
+   - Click "Start" on the device card
 
-👉 **See [TESTING_GUIDE.md](TESTING_GUIDE.md) for detailed testing instructions**
+6. **Watch it work!** 🎉 Real-time data updates!
 
-### For Production (Real PLC)
+👉 **See [TESTING_MULTI_DEVICE.md](TESTING_MULTI_DEVICE.md) for comprehensive testing guide**
 
-1. **Update `.env` with your PLC details:**
-   ```bash
-   ETHERNETIP_HOST=192.168.1.100  # Your PLC IP
-   ETHERNETIP_TAGS=Tag1,Tag2,Tag3  # Your tag names
-   ```
+### Option 2: Production with Real PLCs
 
-2. **Run the application:**
+1. **Install and start application:**
    ```powershell
+   pip install -r requirements.txt
    python app.py
    ```
 
-👉 **See [SETUP_GUIDE.md](SETUP_GUIDE.md) for production deployment**
+2. **Open web interface:**
+   ```
+   http://localhost:5000
+   ```
+
+3. **Add your PLC devices:**
+   - Click "Add New Device" 
+   - Enter PLC details (IP, tags, etc.)
+   - Start each device
+
+👉 **See [MULTI_DEVICE_GUIDE.md](MULTI_DEVICE_GUIDE.md) for detailed usage instructions**
 
 ## 📁 Project Structure
 
 ```
-├── app.py                      # Main application (connects to real PLC)
-├── app_with_simulator.py       # Testing version (uses simulator)
-├── ethernetip_simulator.py     # Mock EthernetIP client
+├── app.py                      # Main application (multi-device support)
+├── app_with_simulator.py       # Legacy single-device with simulator
+├── ethernetip_simulator.py     # Mock EthernetIP server for testing
 ├── requirements.txt            # Python dependencies
-├── .env.example               # Configuration template
-├── TESTING_GUIDE.md           # Testing instructions
-├── SETUP_GUIDE.md             # Production setup guide
+├── .env.example               # Configuration template (MQTT settings)
+├── MULTI_DEVICE_GUIDE.md      # Complete usage guide (START HERE!)
+├── TESTING_MULTI_DEVICE.md    # Testing instructions
+├── CHANGELOG.md               # Version history and changes
+├── UPGRADE_SUMMARY.md         # Quick reference for v2.0 changes
 ├── templates/
-│   └── index.html             # Web dashboard
+│   └── index.html             # Multi-device web dashboard
 └── static/
     ├── script.js              # Dashboard JavaScript
     └── style.css              # Dashboard styling
@@ -74,40 +101,74 @@ A Python-based bridge that reads data from EthernetIP PLCs and publishes it to M
 ## 🎯 How It Works
 
 ```
-┌─────────────┐     EthernetIP     ┌──────────────┐     MQTT      ┌─────────┐
-│     PLC     │ ← ← ← ← ← ← ← ← ← │    Bridge    │ → → → → → → →│  Broker │
-│  (Tags)     │   Read Tags        │   (Python)   │   Publish     │  (MQTT) │
-└─────────────┘                    └──────────────┘               └─────────┘
-                                           ↓
-                                    ┌──────────────┐
-                                    │ Web Dashboard│
-                                    │  (Monitor)   │
-                                    └──────────────┘
+┌─────────────┐     EthernetIP     ┌──────────────────┐     MQTT      ┌─────────┐
+│   PLC-1     │ ← ← ← ← ← ← ← ← ← │                  │ → → → → → → →│  Broker │
+│  (Tags)     │                    │  Multi-Device    │               │  (MQTT) │
+└─────────────┘                    │     Bridge       │               └─────────┘
+                                   │    (Python)      │
+┌─────────────┐                    │                  │
+│   PLC-2     │ ← ← ← ← ← ← ← ← ← │  - Device 1      │
+│  (Tags)     │                    │  - Device 2      │
+└─────────────┘                    │  - Device N      │
+                                   └──────────────────┘
+┌─────────────┐                           ↓
+│   PLC-N     │ ← ← ← ← ← ← ← ← ← ← ┌──────────────┐
+│  (Tags)     │                      │ Web Dashboard│
+└─────────────┘                      │  (Monitor)   │
+                                     └──────────────┘
 ```
 
-1. **Bridge** connects to EthernetIP PLC and reads configured tags
-2. **Data** is formatted with timestamps and value types
-3. **MQTT** messages are published to topics like `ethernetip/Tag1`
-4. **Dashboard** provides real-time monitoring and control
+1. **Bridge** connects to multiple EthernetIP devices simultaneously
+2. **Each device** polls its configured tags independently
+3. **Data** is formatted with device info, timestamps, and value types
+4. **MQTT** messages published to device-specific topics like `factory/plc1/Temperature`
+5. **Dashboard** provides real-time monitoring and control for all devices
 
 ## ⚙️ Configuration
 
-Edit `.env` file to configure:
+### MQTT Broker (`.env` file)
+
+The MQTT broker is shared across all devices:
 
 ```bash
-# EthernetIP Settings
-ETHERNETIP_HOST=127.0.0.1          # PLC IP address
-ETHERNETIP_SLOT=0                  # PLC slot number
-ETHERNETIP_TAGS=Tag1,Tag2,Tag3     # Comma-separated tags
-
-# MQTT Settings
+# MQTT Settings (Shared)
 MQTT_BROKER=broker.hivemq.com      # MQTT broker address
 MQTT_PORT=1883                     # MQTT port
-MQTT_TOPIC_PREFIX=ethernetip/      # Topic prefix
 MQTT_CLIENT_ID=ethernetip_bridge   # Client identifier
+```
 
-# Polling Settings
-POLL_INTERVAL=1.0                  # Seconds between reads
+### Devices (Web UI)
+
+Each device is configured independently through the web interface:
+
+**Device Settings:**
+- **Name**: Friendly identifier (e.g., "PLC-1", "Robot-Arm")
+- **Host**: IP address or hostname (e.g., "192.168.1.100")
+- **Slot**: EthernetIP slot number (default: 0)
+- **Tags**: Comma-separated list (e.g., "Temperature,Pressure,Speed")
+- **MQTT Topic Prefix**: Custom topic path (e.g., "factory/plc1/")
+- **Poll Interval**: Seconds between reads (e.g., 5.0)
+
+### Example Multi-Device Setup
+
+```
+Device 1: Production Line A
+  - Host: 192.168.1.100
+  - Tags: Speed,Temperature,Status
+  - Topic: factory/lineA/
+  - Poll: 2.0 seconds
+
+Device 2: Quality Control
+  - Host: 192.168.1.101
+  - Tags: DefectCount,PassRate
+  - Topic: factory/qc/
+  - Poll: 10.0 seconds
+
+Device 3: Robot Controller
+  - Host: 192.168.1.102
+  - Tags: Position_X,Position_Y,Gripper
+  - Topic: factory/robot/
+  - Poll: 1.0 seconds
 ```
 
 ## 🧪 Testing Without PLC
@@ -129,13 +190,28 @@ See [TESTING_GUIDE.md](TESTING_GUIDE.md) for complete testing instructions.
 
 ## 📊 Web Dashboard
 
-The web interface shows:
+The web interface provides comprehensive multi-device management:
 
-- 🟢 **Connection Status**: Bridge, EthernetIP, and MQTT status
-- 📈 **Live Data**: Current values of all configured tags
-- 🎮 **Controls**: Start/Stop bridge operation
-- ⚙️ **Configuration**: View current settings
-- 🔴 **Error Display**: Clear error messages when issues occur
+### Left Panel: Device Management
+- 🟢 **MQTT Connection Status**: Shared broker status
+- 📊 **Device Count**: Total configured devices
+- ➕ **Add Device Form**: Configure new devices on-the-fly
+
+### Right Panel: Device List
+- � **Device Cards**: One card per device showing:
+  - Device name and connection status
+  - Host address and poll interval
+  - Real-time tag values with types
+  - Message counters and timestamps
+  - Individual controls (Start/Stop/Edit/Delete)
+  - Error messages (if any)
+
+### Features
+- ⚡ **Real-time Updates**: Auto-refresh every 2 seconds
+- 🎮 **Bulk Controls**: Start/Stop all devices at once
+- ✏️ **Live Editing**: Modify device settings without restart
+- �️ **Dynamic Management**: Add/remove devices anytime
+- 📱 **Responsive**: Works on desktop and mobile
 
 ## 🔧 Dependencies
 
@@ -183,9 +259,12 @@ ETHERNETIP_TAGS=@1/1/1,@1/1/7,@4/100/3
 
 ## 📚 Documentation
 
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Complete testing instructions with simulator
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Production deployment guide
-- **[replit.md](replit.md)** - Original Replit deployment notes
+- **[MULTI_DEVICE_GUIDE.md](MULTI_DEVICE_GUIDE.md)** ⭐ - Complete usage guide for v2.0
+- **[TESTING_MULTI_DEVICE.md](TESTING_MULTI_DEVICE.md)** - Testing with multiple devices
+- **[UPGRADE_SUMMARY.md](UPGRADE_SUMMARY.md)** - Quick reference for v2.0 changes
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and breaking changes
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Production deployment guide (legacy)
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Single-device testing (legacy)
 
 ## 🤝 Contributing
 
@@ -197,13 +276,17 @@ This project is open source and available for use in commercial and non-commerci
 
 ## 💡 Use Cases
 
-- Industrial IoT data collection
-- PLC data logging and monitoring
-- Integration with cloud platforms
-- Real-time dashboards and analytics
-- SCADA system integration
-- Process monitoring and alerting
+- **Multi-Line Manufacturing**: Monitor multiple production lines simultaneously
+- **Distributed Systems**: Connect to PLCs across different locations
+- **Mixed Environments**: Test and production devices side-by-side
+- **Different Poll Rates**: Critical vs. non-critical data collection
+- **Vendor Integration**: Multiple PLC brands in one interface
+- **Industrial IoT Hub**: Central data collection point
+- **Cloud Platform Integration**: Feed data to AWS/Azure/GCP
+- **Real-time Dashboards**: Live monitoring and analytics
+- **Process Control**: SCADA system integration
+- **Predictive Maintenance**: Continuous equipment monitoring
 
 ---
 
-**Ready to start?** Follow the [TESTING_GUIDE.md](TESTING_GUIDE.md) to test with the simulator!
+**Ready to start?** Follow **[MULTI_DEVICE_GUIDE.md](MULTI_DEVICE_GUIDE.md)** for the complete guide!

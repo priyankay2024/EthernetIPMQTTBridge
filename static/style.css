@@ -10,8 +10,42 @@ body {
     font-size: 0.9rem;
 }
 
-#tag-values {
-    max-height: 300px;
+/* Device Cards */
+.device-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.device-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.device-header {
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+.device-header h5 {
+    color: white;
+}
+
+.device-header small {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.device-body {
+    padding: 15px;
+}
+
+/* Tag Values */
+#tag-values, .tag-values-container {
+    max-height: 400px;
     overflow-y: auto;
 }
 
@@ -21,23 +55,101 @@ body {
     border-left: 3px solid #007bff;
     margin-bottom: 10px;
     border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.tag-item:hover {
+    background-color: #e9ecef;
+    border-left-color: #0056b3;
+}
+
+.tag-item.border-danger {
+    border-left-color: #dc3545;
 }
 
 .tag-name {
     font-weight: bold;
     color: #333;
+    font-size: 0.95rem;
 }
 
 .tag-value {
     color: #007bff;
     font-size: 1.1rem;
+    font-weight: 500;
+    margin: 5px 0;
 }
 
 .tag-type {
     color: #6c757d;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 #tags-list .badge {
     margin: 2px;
 }
+
+/* Buttons */
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.btn-group .btn:last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+/* Form Styles */
+#add-device-form .form-control,
+#edit-device-form .form-control {
+    border-radius: 6px;
+}
+
+#add-device-form .btn,
+#edit-device-form .btn {
+    border-radius: 6px;
+}
+
+/* Scrollbar Styles */
+.tag-values-container::-webkit-scrollbar,
+#tag-values::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tag-values-container::-webkit-scrollbar-track,
+#tag-values::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.tag-values-container::-webkit-scrollbar-thumb,
+#tag-values::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.tag-values-container::-webkit-scrollbar-thumb:hover,
+#tag-values::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Empty State */
+#devices-container .text-muted i {
+    opacity: 0.3;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .device-header .btn-group {
+        margin-top: 10px;
+    }
+    
+    .device-header > div {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+}
+
