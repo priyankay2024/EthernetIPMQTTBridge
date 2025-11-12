@@ -1,12 +1,14 @@
 from flask import Flask, render_template, jsonify, request
-from cpppo.server.enip import client
-import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 import os
 import threading
 import time
 import json
 from datetime import datetime
+import paho.mqtt.client as mqtt
+
+# Import the simulator instead of real cpppo client
+import ethernetip_simulator as simulator_client
 
 load_dotenv()
 
@@ -16,12 +18,13 @@ class EthernetIPMQTTBridge:
     def __init__(self):
         self.ethernetip_host = os.getenv('ETHERNETIP_HOST', '127.0.0.1')
         self.ethernetip_slot = int(os.getenv('ETHERNETIP_SLOT', '0'))
-        self.tags = "Tag1,Tag2,Tag3".split(',')
+        self.tags = os.getenv('ETHERNETIP_TAGS', 'Tag1,Tag2,Tag3').split(',')
+        print(f"Configured tags for simulation: {self.tags}")
         self.mqtt_broker = os.getenv('MQTT_BROKER', 'broker.hivemq.com')
         self.mqtt_port = int(os.getenv('MQTT_PORT', '1883'))
         self.mqtt_topic_prefix = os.getenv('MQTT_TOPIC_PREFIX', 'ethernetip/')
         self.mqtt_client_id = os.getenv('MQTT_CLIENT_ID', 'ethernetip_bridge')
-        self.poll_interval = float(os.getenv('POLL_INTERVAL', '1.0'))
+        self.poll_interval = 10
         
         self.running = False
         self.ethernetip_connected = False
@@ -70,11 +73,12 @@ class EthernetIPMQTTBridge:
                 print(self.last_error)
                 return results
             
-            print(f"Connecting to EthernetIP device at {self.ethernetip_host}...")
+            print(f"[SIMULATOR MODE] Connecting to EthernetIP device at {self.ethernetip_host}...")
             print(f"Reading tags: {cleaned_tags}")
             
-            with client.connector(host=self.ethernetip_host, timeout=5.0) as connection:
-                operations = client.parse_operations(cleaned_tags)
+            # Use the mock client instead of real cpppo client
+            with simulator_client.connector(host=self.ethernetip_host, timeout=5.0) as connection:
+                operations = simulator_client.parse_operations(cleaned_tags)
                 
                 for index, descr, op, reply, status, value in connection.synchronous(
                     operations=operations
@@ -90,7 +94,7 @@ class EthernetIPMQTTBridge:
                             value_type = f"array[{len(value)}]"
                         
                         results[tag_name] = {'value': value, 'type': value_type}
-                        print(f"Successfully read {tag_name}: {value}")
+                        print(f"[SIMULATOR] Successfully read {tag_name}: {value}")
                 
                 self.ethernetip_connected = True
                 self.last_error = None
@@ -129,6 +133,12 @@ class EthernetIPMQTTBridge:
         self.connect_mqtt()
         mqtt_retry_delay = 5
         last_mqtt_attempt = 0
+        
+        print("\n" + "=" * 70)
+        print(" " * 15 + "🔄 SIMULATOR MODE ACTIVE 🔄")
+        print("=" * 70)
+        print("Using mock EthernetIP client for testing without real PLC")
+        print("=" * 70 + "\n")
         
         while self.running:
             if not self.mqtt_connected and (time.time() - last_mqtt_attempt) > mqtt_retry_delay:
@@ -171,7 +181,8 @@ class EthernetIPMQTTBridge:
             'last_error': self.last_error,
             'message_count': self.message_count,
             'last_update': self.last_update,
-            'poll_interval': self.poll_interval
+            'poll_interval': self.poll_interval,
+            'simulator_mode': True  # Indicate simulator is active
         }
 
 bridge = EthernetIPMQTTBridge()
@@ -187,7 +198,7 @@ def get_status():
 @app.route('/api/start', methods=['POST'])
 def start_bridge():
     bridge.start()
-    return jsonify({'success': True, 'message': 'Bridge started'})
+    return jsonify({'success': True, 'message': 'Bridge started in SIMULATOR mode'})
 
 @app.route('/api/stop', methods=['POST'])
 def stop_bridge():
@@ -199,4 +210,13 @@ def config():
     return jsonify(bridge.get_status())
 
 if __name__ == '__main__':
+    print("\n" + "=" * 70)
+    print(" " * 10 + "EthernetIP to MQTT Bridge - SIMULATOR MODE")
+    print("=" * 70)
+    print("\nStarting Flask application on http://0.0.0.0:5000")
+    print("Open your browser and navigate to the URL above")
+    print("\nThis version uses a MOCK EthernetIP client for testing.")
+    print("No real PLC hardware is required!")
+    print("=" * 70 + "\n")
+    
     app.run(host='0.0.0.0', port=5000, debug=False)
