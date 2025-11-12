@@ -1,10 +1,12 @@
 let updateInterval;
 let editDeviceModal;
+let discoveredTags = []; // Store discovered tags
 
 document.addEventListener('DOMContentLoaded', function() {
     editDeviceModal = new bootstrap.Modal(document.getElementById('editDeviceModal'));
     
     document.getElementById('add-device-form').addEventListener('submit', addDevice);
+    document.getElementById('discover-tags-btn').addEventListener('click', discoverTags);
     document.getElementById('save-device-btn').addEventListener('click', saveDeviceChanges);
     document.getElementById('start-all-btn').addEventListener('click', startAllDevices);
     document.getElementById('stop-all-btn').addEventListener('click', stopAllDevices);
@@ -194,26 +196,117 @@ function createDeviceCard(device) {
     return card;
 }
 
+function discoverTags() {
+    const host = document.getElementById('device-host').value;
+    const slot = parseInt(document.getElementById('device-slot').value);
+    
+    if (!host) {
+        alert('Please enter a Host/IP Address first');
+        return;
+    }
+    
+    const discoverBtn = document.getElementById('discover-tags-btn');
+    const statusDiv = document.getElementById('tag-discovery-status');
+    const tagsContainer = document.getElementById('discovered-tags-container');
+    const tagsList = document.getElementById('discovered-tags-list');
+    const tagCountBadge = document.getElementById('tag-count-badge');
+    
+    // Show loading state
+    discoverBtn.disabled = true;
+    discoverBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Discovering tags...';
+    statusDiv.className = 'text-info small mt-1';
+    statusDiv.textContent = 'Connecting to device and discovering tags...';
+    tagsContainer.style.display = 'none';
+    
+    console.log('Discovering tags from:', host, 'slot:', slot);
+    
+    fetch('/api/discover-tags', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            host: host,
+            slot: slot
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Tag discovery response:', data);
+        
+        if (data.success) {
+            discoveredTags = data.tags;
+            
+            // Display discovered tags
+            tagsList.innerHTML = '';
+            data.tags.forEach(tag => {
+                const tagBadge = document.createElement('span');
+                tagBadge.className = 'badge bg-success me-1 mb-1';
+                tagBadge.textContent = tag;
+                tagsList.appendChild(tagBadge);
+            });
+            
+            tagsContainer.style.display = 'block';
+            tagCountBadge.textContent = `${data.count} tags`;
+            tagCountBadge.style.display = 'inline';
+            
+            statusDiv.className = 'text-success small mt-1';
+            statusDiv.innerHTML = `<i class="bi bi-check-circle"></i> Successfully discovered ${data.count} tags`;
+            
+            console.log('Tags discovered:', discoveredTags);
+        } else {
+            discoveredTags = [];
+            tagsContainer.style.display = 'none';
+            tagCountBadge.style.display = 'none';
+            
+            statusDiv.className = 'text-danger small mt-1';
+            statusDiv.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ${data.error || 'Failed to discover tags'}`;
+        }
+        
+        // Reset button
+        discoverBtn.disabled = false;
+        discoverBtn.innerHTML = '<i class="bi bi-search"></i> Test Connection & Discover Tags';
+    })
+    .catch(error => {
+        console.error('Error discovering tags:', error);
+        discoveredTags = [];
+        
+        statusDiv.className = 'text-danger small mt-1';
+        statusDiv.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Error: ${error.message}`;
+        
+        tagsContainer.style.display = 'none';
+        tagCountBadge.style.display = 'none';
+        
+        // Reset button
+        discoverBtn.disabled = false;
+        discoverBtn.innerHTML = '<i class="bi bi-search"></i> Test Connection & Discover Tags';
+    });
+}
+
 function addDevice(e) {
     e.preventDefault();
     
     const name = document.getElementById('device-name').value;
     const host = document.getElementById('device-host').value;
     const slot = parseInt(document.getElementById('device-slot').value);
-    const tags = document.getElementById('device-tags').value;
     const mqttPrefix = document.getElementById('device-mqtt-prefix').value || `ethernetip/${name}/`;
     const pollInterval = parseFloat(document.getElementById('device-poll-interval').value);
     
+    // Use discovered tags if available, otherwise let backend auto-discover
     const deviceData = {
         name: name,
         host: host,
         slot: slot,
-        tags: tags,
+        tags: discoveredTags.length > 0 ? discoveredTags : [], // Send empty array to trigger auto-discovery
         mqtt_topic_prefix: mqttPrefix,
         poll_interval: pollInterval
     };
     
     console.log('Adding device:', deviceData);
+    
+    const submitBtn = document.getElementById('add-device-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Adding device...';
     
     fetch('/api/devices', {
         method: 'POST',
@@ -227,9 +320,25 @@ function addDevice(e) {
         console.log('API response:', data);
         if (data.success) {
             console.log('Device added successfully:', data.device_id);
+            
+            // Show success message if tags were auto-discovered
+            if (data.tags_discovered && data.tag_count) {
+                const statusDiv = document.getElementById('tag-discovery-status');
+                statusDiv.className = 'text-success small mt-1';
+                statusDiv.innerHTML = `<i class="bi bi-check-circle"></i> Device added with ${data.tag_count} auto-discovered tags`;
+            }
+            
             console.log('About to reset form...');
             try {
                 document.getElementById('add-device-form').reset();
+                
+                // Reset tag discovery UI
+                discoveredTags = [];
+                document.getElementById('discovered-tags-container').style.display = 'none';
+                document.getElementById('tag-count-badge').style.display = 'none';
+                document.getElementById('tag-discovery-status').className = 'text-muted small mt-1';
+                document.getElementById('tag-discovery-status').textContent = 'Tags will be automatically discovered when you connect to the device';
+                
                 console.log('Form reset complete');
             } catch (err) {
                 console.error('Error resetting form:', err);
@@ -256,10 +365,18 @@ function addDevice(e) {
             console.error('Error adding device:', data.error);
             alert('Error adding device: ' + data.error);
         }
+        
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Device';
     })
     .catch(error => {
         console.error('Error adding device:', error);
         alert('Error adding device: ' + error.message);
+        
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Device';
     });
 }
 

@@ -1,6 +1,23 @@
 from flask import Flask, render_template, jsonify, request
-# from cpppo.server.enip import client
+
+# EthernetIP Client Configuration
+# ================================
+# SIMULATOR MODE (Current - for testing without hardware):
 import ethernetip_simulator as client
+
+# PRODUCTION MODE Option 1 - PyLogix (RECOMMENDED for Allen-Bradley PLCs):
+# Uncomment the line below and comment out the simulator import above
+# Install first: pip install pylogix
+# import ethernetip_client_pylogix as client
+
+# PRODUCTION MODE Option 2 - CPPPO (Advanced, requires CIP implementation):
+# Uncomment the line below and comment out the simulator import above
+# Note: list_all_tags() needs manual implementation for real tag discovery
+# import ethernetip_client_real as client
+
+# See PRODUCTION_PLC_SETUP.md for complete setup instructions
+# ================================
+
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 import os
@@ -289,6 +306,44 @@ def index():
 def get_status():
     return jsonify(bridge.get_status())
 
+@app.route('/api/discover-tags', methods=['POST'])
+def discover_tags():
+    """
+    Endpoint to discover all available tags from a PLC device.
+    Expects JSON with 'host' and optional 'slot' parameters.
+    """
+    data = request.json
+    
+    if 'host' not in data:
+        return jsonify({'success': False, 'error': 'Host address is required'}), 400
+    
+    host = data['host']
+    slot = int(data.get('slot', 0))
+    
+    try:
+        print(f"Discovering tags from {host} (slot: {slot})...")
+        
+        # Use the list_all_tags function from the client module
+        tags = client.list_all_tags(host, slot, timeout=5.0)
+        
+        if not tags:
+            return jsonify({
+                'success': False, 
+                'error': 'No tags found or unable to connect to device'
+            }), 404
+        
+        print(f"Successfully discovered {len(tags)} tags from {host}")
+        return jsonify({
+            'success': True,
+            'tags': tags,
+            'count': len(tags)
+        })
+        
+    except Exception as e:
+        error_msg = f"Error discovering tags: {str(e)}"
+        print(error_msg)
+        return jsonify({'success': False, 'error': error_msg}), 500
+
 @app.route('/api/devices', methods=['GET'])
 def get_devices():
     return jsonify(bridge.get_all_devices_status())
@@ -297,18 +352,44 @@ def get_devices():
 def add_device():
     data = request.json
     
-    required_fields = ['name', 'host', 'tags']
+    required_fields = ['name', 'host']
     if not all(field in data for field in required_fields):
-        return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+        return jsonify({'success': False, 'error': 'Missing required fields (name, host)'}), 400
     
-    # Process tags - handle both string and list
-    if isinstance(data['tags'], list):
-        tags = [tag.strip() for tag in data['tags'] if tag.strip()]
+    # Auto-discover tags if not provided
+    tags = data.get('tags', [])
+    
+    # If tags are not provided or empty, auto-discover them
+    if not tags or (isinstance(tags, list) and len(tags) == 0):
+        try:
+            host = data['host']
+            slot = int(data.get('slot', 0))
+            
+            print(f"No tags provided. Auto-discovering tags from {host}...")
+            discovered_tags = client.list_all_tags(host, slot, timeout=5.0)
+            
+            if not discovered_tags:
+                return jsonify({
+                    'success': False, 
+                    'error': 'No tags found on device. Please check connection settings.'
+                }), 400
+            
+            tags = discovered_tags
+            print(f"Auto-discovered {len(tags)} tags: {', '.join(tags)}")
+            
+        except Exception as e:
+            error_msg = f"Failed to auto-discover tags: {str(e)}"
+            print(error_msg)
+            return jsonify({'success': False, 'error': error_msg}), 500
     else:
-        tags = [tag.strip() for tag in data['tags'].split(',') if tag.strip()]
+        # Process tags - handle both string and list
+        if isinstance(tags, list):
+            tags = [tag.strip() for tag in tags if tag.strip()]
+        else:
+            tags = [tag.strip() for tag in tags.split(',') if tag.strip()]
     
     if not tags:
-        return jsonify({'success': False, 'error': 'At least one tag is required'}), 400
+        return jsonify({'success': False, 'error': 'No valid tags found or discovered'}), 400
     
     try:
         device_id = bridge.add_device(
@@ -320,8 +401,13 @@ def add_device():
             poll_interval=float(data.get('poll_interval', 5.0))
         )
         
-        print(f"Device added successfully: {data['name']} (ID: {device_id})")
-        return jsonify({'success': True, 'device_id': device_id})
+        print(f"Device added successfully: {data['name']} (ID: {device_id}) with {len(tags)} tags")
+        return jsonify({
+            'success': True, 
+            'device_id': device_id,
+            'tags_discovered': tags,
+            'tag_count': len(tags)
+        })
     except Exception as e:
         print(f"Error adding device: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500

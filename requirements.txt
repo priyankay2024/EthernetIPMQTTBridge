@@ -3,3 +3,7 @@ cpppo==5.2.5
 paho-mqtt==1.6.1
 python-dotenv==1.0.0
 gunicorn==21.2.0
+
+# Optional: Better tag enumeration for Allen-Bradley PLCs
+# Uncomment if using real PLCs (highly recommended)
+# pylogix==1.3.0

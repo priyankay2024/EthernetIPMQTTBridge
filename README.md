@@ -1,11 +1,12 @@
-# EthernetIP to MQTT Bridge 🔌 → 📡
+# EthernetIP MQTT Bridge with Auto Tag Discovery
 
 A Python-based bridge that reads data from **multiple EthernetIP PLCs simultaneously** and publishes to MQTT brokers. Perfect for industrial IoT applications!
 
 ## ✨ Features
 
 - 🔄 **Multi-Device Support** - Connect to unlimited EthernetIP devices
-- 📤 Real-time polling and MQTT publishing
+- � **Auto Tag Discovery** - Automatically fetch all available tags from PLC (no manual entry!)
+- �📤 Real-time polling and MQTT publishing
 - 🌐 Web-based configuration and monitoring dashboard
 - 🎮 Individual device control (start/stop/edit/delete)
 - 📊 Live status and data visualization per device
@@ -13,6 +14,13 @@ A Python-based bridge that reads data from **multiple EthernetIP PLCs simultaneo
 - ⚙️ Per-device configuration (tags, polling, topics)
 
 ## 🎉 What's New in v2.0
+
+### Auto Tag Discovery (NEW!)
+- 🔍 **Automatic Tag Detection** - No need to manually enter tag names!
+- ✨ **Test Connection Button** - Preview all available tags before adding device
+- 🚀 **Smart Discovery** - System auto-discovers tags if not manually specified
+- 📋 **Visual Feedback** - See all discovered tags with badge UI
+- ⚡ **Faster Setup** - Connect to devices in seconds
 
 ### Multi-Device Management
 - ✅ Connect to **multiple PLCs** simultaneously
@@ -51,11 +59,12 @@ See **[CHANGELOG.md](CHANGELOG.md)** for full list of changes.
    - Fill the "Add New Device" form:
      - **Name**: `Simulator`
      - **Host**: `127.0.0.1`
-     - **Tags**: `Tag1,Tag2,Tag3`
-   - Click "Add Device"
+     - **Slot**: `0` (default)
+   - Click "Test Connection & Discover Tags" to see all available tags
+   - Click "Add Device" (tags will be auto-discovered)
    - Click "Start" on the device card
 
-6. **Watch it work!** 🎉 Real-time data updates!
+6. **Watch it work!** 🎉 Real-time data updates for all discovered tags!
 
 👉 **See [TESTING_MULTI_DEVICE.md](TESTING_MULTI_DEVICE.md) for comprehensive testing guide**
 
@@ -139,37 +148,52 @@ MQTT_CLIENT_ID=ethernetip_bridge   # Client identifier
 
 ### Devices (Web UI)
 
-Each device is configured independently through the web interface:
+Each device is configured independently through the web interface with **automatic tag discovery**:
 
 **Device Settings:**
 - **Name**: Friendly identifier (e.g., "PLC-1", "Robot-Arm")
 - **Host**: IP address or hostname (e.g., "192.168.1.100")
 - **Slot**: EthernetIP slot number (default: 0)
-- **Tags**: Comma-separated list (e.g., "Temperature,Pressure,Speed")
+- **Tags**: Auto-discovered from device (or manually specified if needed)
 - **MQTT Topic Prefix**: Custom topic path (e.g., "factory/plc1/")
 - **Poll Interval**: Seconds between reads (e.g., 5.0)
+
+**Two Ways to Add Devices:**
+
+1. **Preview Tags (Recommended):**
+   - Enter device name and host
+   - Click "Test Connection & Discover Tags"
+   - See all available tags before adding
+   - Click "Add Device"
+
+2. **Quick Add:**
+   - Enter device name and host
+   - Click "Add Device" directly
+   - Tags are auto-discovered in background
 
 ### Example Multi-Device Setup
 
 ```
 Device 1: Production Line A
   - Host: 192.168.1.100
-  - Tags: Speed,Temperature,Status
+  - Tags: Auto-discovered (Speed, Temperature, Status, Counter, etc.)
   - Topic: factory/lineA/
   - Poll: 2.0 seconds
 
 Device 2: Quality Control
   - Host: 192.168.1.101
-  - Tags: DefectCount,PassRate
+  - Tags: Auto-discovered (DefectCount, PassRate, InspectionTime, etc.)
   - Topic: factory/qc/
   - Poll: 10.0 seconds
 
 Device 3: Robot Controller
   - Host: 192.168.1.102
-  - Tags: Position_X,Position_Y,Gripper
+  - Tags: Auto-discovered (Position_X, Position_Y, Gripper, Status, etc.)
   - Topic: factory/robot/
   - Poll: 1.0 seconds
 ```
+
+*Note: With auto-discovery, you don't need to manually specify tag lists anymore!*
 
 ## 🧪 Testing Without PLC
 
@@ -187,6 +211,50 @@ The project includes a **simulator mode** so you can test everything on your lap
 - `Motor_Running`, `Voltage` - Equipment data
 
 See [TESTING_GUIDE.md](TESTING_GUIDE.md) for complete testing instructions.
+
+---
+
+## 🏭 Production Deployment with Real PLCs
+
+### ⚠️ Important: Switching to Real PLCs
+
+The current configuration uses a **simulator** for testing. To use with **real Allen-Bradley PLCs**, you need to switch the client library.
+
+**Quick Setup for Production:**
+
+1. **Install PyLogix** (recommended for Allen-Bradley):
+   ```bash
+   pip install pylogix
+   ```
+
+2. **Edit `app.py` line 3** - change from:
+   ```python
+   import ethernetip_simulator as client
+   ```
+   
+   to:
+   ```python
+   import ethernetip_client_pylogix as client
+   ```
+
+3. **That's it!** Tag discovery will now work with your real PLCs.
+
+📖 **See [PRODUCTION_PLC_SETUP.md](PRODUCTION_PLC_SETUP.md) for complete production setup guide**
+
+📋 **See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for quick comparison**
+
+### Why PyLogix?
+
+- ✅ **Native tag enumeration** - works out of the box
+- ✅ **Allen-Bradley optimized** - ControlLogix, CompactLogix, Micro800
+- ✅ **Simple API** - easy to use
+- ✅ **Tag discovery included** - no custom implementation needed
+
+### What About CPPPO?
+
+The standard `cpppo` library does **NOT** include tag enumeration functions. You would need to manually implement CIP Symbol Object queries. Unless you have specific requirements for CPPPO, use PyLogix instead.
+
+---
 
 ## 📊 Web Dashboard
 

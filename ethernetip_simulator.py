@@ -118,6 +118,34 @@ def parse_operations(tags):
     return MockEthernetIPClient.parse_operations(tags)
 
 
+def list_all_tags(host, slot=0, timeout=5.0):
+    """
+    List all available tags from a PLC device.
+    This simulates tag discovery functionality.
+    
+    Args:
+        host: PLC IP address
+        slot: PLC slot number
+        timeout: Connection timeout
+        
+    Returns:
+        list: List of available tag names
+    """
+    print(f"[SIMULATOR] Listing all tags from {host} (slot: {slot})")
+    
+    # In a real implementation with cpppo, this would:
+    # 1. Connect to the PLC
+    # 2. Use CIP services to enumerate all controller tags
+    # 3. Return the list of tag names
+    
+    # For the simulator, return all available simulated tags
+    client = get_mock_client()
+    tags = list(client.tags.keys())
+    
+    print(f"[SIMULATOR] Found {len(tags)} tags: {', '.join(tags)}")
+    return tags
+
+
 if __name__ == '__main__':
     """Demonstrate the mock client"""
     print("=" * 70)
