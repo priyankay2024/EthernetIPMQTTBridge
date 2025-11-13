@@ -14,7 +14,9 @@ class Device(db.Model):
     name = db.Column(db.String(100), nullable=False)
     host = db.Column(db.String(100), nullable=False)
     slot = db.Column(db.Integer, default=0)
+    hardware_id = db.Column(db.String(100), nullable=True)
     mqtt_topic_prefix = db.Column(db.String(200), nullable=False)
+    mqtt_format = db.Column(db.String(20), default='json', nullable=False)  # 'json' or 'string'
     poll_interval = db.Column(db.Float, default=5.0)
     enabled = db.Column(db.Boolean, default=True)
     auto_start = db.Column(db.Boolean, default=True)
@@ -34,7 +36,9 @@ class Device(db.Model):
             'name': self.name,
             'host': self.host,
             'slot': self.slot,
+            'hardware_id': self.hardware_id,
             'mqtt_topic_prefix': self.mqtt_topic_prefix,
+            'mqtt_format': self.mqtt_format,
             'poll_interval': self.poll_interval,
             'enabled': self.enabled,
             'auto_start': self.auto_start,

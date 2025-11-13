@@ -152,30 +152,101 @@ class MQTTClientService:
             logger.error(f"Error publishing to MQTT: {e}")
             return False
     
-    def publish_device_data(self, device_id, device_name, tag_name, value, 
-                           data_type, topic_prefix):
+    def publish_device_data(self, device_id, device_name, tag_data, 
+                           topic_prefix, hardware_id=None, mqtt_format='json'):
         """
-        Publish device tag data to MQTT
+        Publish device tag data to MQTT based on format
         
         Args:
             device_id: Device identifier
             device_name: Device name
-            tag_name: Tag name
-            value: Tag value
-            data_type: Data type
+            tag_data: Dictionary of tag_name -> {value, type}
             topic_prefix: MQTT topic prefix
+            hardware_id: Hardware identifier (HWID)
+            mqtt_format: Format for publishing ('json' or 'string')
+            
+        Returns:
+            bool: True if published successfully
         """
-        topic = f"{topic_prefix}{tag_name}"
+        try:
+            if mqtt_format == 'string':
+                return self._publish_device_data_string(
+                    device_id, device_name, tag_data, topic_prefix, hardware_id
+                )
+            else:
+                return self._publish_device_data_json(
+                    device_id, device_name, tag_data, topic_prefix, hardware_id
+                )
+        except Exception as e:
+            logger.error(f"Error publishing device data: {e}")
+            return False
+    
+    def _publish_device_data_json(self, device_id, device_name, tag_data, 
+                                   topic_prefix, hardware_id=None):
+        """
+        Publish all device tags in single JSON format
+        Format: {HWID: value, Tags: {tag1: value1, tag2: value2, ...}, Timestamp: time}
         
+        Args:
+            device_id: Device identifier
+            device_name: Device name
+            tag_data: Dictionary of tag_name -> {value, type}
+            topic_prefix: MQTT topic prefix
+            hardware_id: Hardware identifier (HWID)
+            
+        Returns:
+            bool: True if published successfully
+        """
+        topic = f"{topic_prefix}data"
+        timestamp = datetime.utcnow().isoformat()
+        
+        # Build payload with HWID and Timestamp
         payload = {
-            'device_id': device_id,
-            'device_name': device_name,
-            'tag': tag_name,
-            'value': value,
-            'type': data_type,
-            'timestamp': datetime.utcnow().isoformat()
+            'HWID': hardware_id or device_name,
         }
         
+        # Merge tags directly into payload
+        for tag_name, data in tag_data.items():
+            if 'error' not in data:
+                payload[tag_name] = data['value']
+        
+        # Add timestamp at the end
+        payload['Timestamp'] = timestamp
+        
+        logger.debug(f"Publishing JSON to {topic}: {payload}")
+        return self.publish(topic, payload)
+    
+    def _publish_device_data_string(self, device_id, device_name, tag_data, 
+                                     topic_prefix, hardware_id=None):
+        """
+        Publish all device tags in single string format
+        Format: HWID,tag1_value,tag2_value,...,Timestamp
+        
+        Args:
+            device_id: Device identifier
+            device_name: Device name
+            tag_data: Dictionary of tag_name -> {value, type}
+            topic_prefix: MQTT topic prefix
+            hardware_id: Hardware identifier (HWID)
+            
+        Returns:
+            bool: True if published successfully
+        """
+        topic = f"{topic_prefix}data"
+        timestamp = datetime.utcnow().isoformat()
+        
+        # Build string with tag values
+        hwid = hardware_id or device_name
+        tag_values = []
+        
+        for tag_name, data in tag_data.items():
+            if 'error' not in data:
+                tag_values.append(str(data['value']))
+        
+        # Format: HWID,tag_values,Timestamp
+        payload = f"{hwid},{','.join(tag_values)},{timestamp}"
+        
+        logger.debug(f"Publishing string to {topic}: {payload}")
         return self.publish(topic, payload)
     
     def get_status(self):

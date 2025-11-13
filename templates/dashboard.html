@@ -29,7 +29,7 @@
             <!-- Left Sidebar with Tabs -->
             <div class="col-md-2 sidebar bg-light border-end">
                 <div class="d-flex flex-column p-3">
-                    <h5 class="text-center mb-4">Navigation</h5>
+                    <h5 class="text-center mb-4">CYGNUS</h5>
                     <ul class="nav nav-pills flex-column mb-auto" id="sidebar-tabs" role="tablist">
                         <li class="nav-item mb-2">
                             <button class="nav-link active w-100 text-start" id="dashboard-tab" data-bs-toggle="tab" 
@@ -148,6 +148,11 @@
                                                 <input type="number" class="form-control" id="device-slot" value="0">
                                             </div>
                                             <div class="mb-3">
+                                                <label class="form-label">Hardware ID (HWID)</label>
+                                                <input type="text" class="form-control" id="device-hardware-id" placeholder="HW001">
+                                                <small class="text-muted">Unique hardware identifier for this device</small>
+                                            </div>
+                                            <div class="mb-3">
                                                 <label class="form-label">Tags</label>
                                                 <button type="button" class="btn btn-info btn-sm w-100 mb-2" id="discover-tags-btn">
                                                     <i class="bi bi-search"></i> Discover Tags
@@ -160,6 +165,24 @@
                                             <div class="mb-3">
                                                 <label class="form-label">MQTT Topic Prefix</label>
                                                 <input type="text" class="form-control" id="device-mqtt-prefix" placeholder="ethernetip/device1/">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">MQTT Publish Format</label>
+                                                <div>
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="mqtt-format" id="format-json" value="json" checked>
+                                                        <label class="form-check-label" for="format-json">
+                                                            JSON
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="mqtt-format" id="format-string" value="string">
+                                                        <label class="form-check-label" for="format-string">
+                                                            String
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <small class="text-muted">JSON: {HWID, Tags, Timestamp} | String: HWID,Tags_values,Timestamp</small>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Poll Interval (seconds)</label>

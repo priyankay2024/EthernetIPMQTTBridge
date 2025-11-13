@@ -112,7 +112,10 @@ def initialize_app():
                 host=device.host,
                 slot=device.slot,
                 tags=tags,
-                poll_interval=device.poll_interval
+                poll_interval=device.poll_interval,
+                hardware_id=device.hardware_id,
+                mqtt_format=device.mqtt_format or 'json',
+                mqtt_topic_prefix=device.mqtt_topic_prefix
             )
             
             logger.info(f"Loaded device: {device.name}")

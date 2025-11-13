@@ -18,13 +18,17 @@ class PLCConnection:
     """Represents a single PLC device connection"""
     
     def __init__(self, device_id, name, host, slot, tags, poll_interval, 
-                 mqtt_service, device_service, flask_app=None):
+                 mqtt_service, device_service, flask_app=None, hardware_id=None, 
+                 mqtt_format='json', mqtt_topic_prefix=None):
         self.device_id = device_id
         self.name = name
         self.host = host
         self.slot = slot
         self.tags = tags
         self.poll_interval = poll_interval
+        self.hardware_id = hardware_id
+        self.mqtt_format = mqtt_format
+        self.mqtt_topic_prefix = mqtt_topic_prefix or f"ethernetip/{name}/"
         
         self.mqtt_service = mqtt_service
         self.device_service = device_service
@@ -137,24 +141,22 @@ class PLCConnection:
             return {}
     
     def _publish_data(self, data):
-        """Publish data to MQTT"""
-        for tag_name, tag_data in data.items():
-            if 'error' in tag_data:
-                continue
+        """Publish data to MQTT using configured format"""
+        try:
+            success = self.mqtt_service.publish_device_data(
+                device_id=self.device_id,
+                device_name=self.name,
+                tag_data=data,
+                topic_prefix=self.mqtt_topic_prefix,
+                hardware_id=self.hardware_id,
+                mqtt_format=self.mqtt_format
+            )
             
-            try:
-                self.mqtt_service.publish_device_data(
-                    device_id=self.device_id,
-                    device_name=self.name,
-                    tag_name=tag_name,
-                    value=tag_data['value'],
-                    data_type=tag_data['type'],
-                    topic_prefix=f"ethernetip/{self.name}/"
-                )
+            if success:
                 self.message_count += 1
-                
-            except Exception as e:
-                logger.error(f"Error publishing data for {self.name}: {e}")
+            
+        except Exception as e:
+            logger.error(f"Error publishing data for {self.name}: {e}")
     
     def get_status(self):
         """Get current status of this connection"""
@@ -207,7 +209,8 @@ class PLCManager:
         self.device_service = device_service
         self.flask_app = flask_app
     
-    def add_device(self, device_id, name, host, slot, tags, poll_interval):
+    def add_device(self, device_id, name, host, slot, tags, poll_interval, 
+                   hardware_id=None, mqtt_format='json', mqtt_topic_prefix=None):
         """Add a new device connection"""
         if device_id in self.connections:
             logger.warning(f"Device {device_id} already exists")
@@ -222,7 +225,10 @@ class PLCManager:
             poll_interval=poll_interval,
             mqtt_service=self.mqtt_service,
             device_service=self.device_service,
-            flask_app=self.flask_app
+            flask_app=self.flask_app,
+            hardware_id=hardware_id,
+            mqtt_format=mqtt_format,
+            mqtt_topic_prefix=mqtt_topic_prefix
         )
         
         self.connections[device_id] = connection

@@ -5,6 +5,7 @@
 // Global variables
 let updateInterval;
 let discoveredTags = [];
+let editingDeviceId = null; // Track which device is being edited
 const socket = io();
 
 // Initialize on document ready
@@ -72,6 +73,7 @@ function setupSocketIO() {
         updateDeviceValuesOnly(data.devices);
         updateDashboardDeviceListOnly(data.devices);
         updateDashboardStatsOnly();
+        updateLiveDataValuesOnly(data.devices);
     });
     
     socket.on('tag_update', (data) => {
@@ -282,6 +284,9 @@ function createDeviceCard(device) {
                                <i class="bi bi-play-fill"></i> Start
                            </button>`
                     }
+                    <button class="btn btn-warning" onclick="editDevice('${device.device_id}')">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
                     <button class="btn btn-danger" onclick="deleteDevice('${device.device_id}', '${device.name}')">
                         <i class="bi bi-trash"></i> Delete
                     </button>
@@ -386,37 +391,46 @@ function updateDeviceValuesOnly(devices) {
 function handleAddDevice(e) {
     e.preventDefault();
     
+    // Get selected MQTT format
+    const mqttFormat = document.querySelector('input[name="mqtt-format"]:checked').value;
+    
     const deviceData = {
         name: document.getElementById('device-name').value,
         host: document.getElementById('device-host').value,
         slot: parseInt(document.getElementById('device-slot').value),
+        hardware_id: document.getElementById('device-hardware-id').value || undefined,
         tags: discoveredTags.length > 0 ? discoveredTags : [],
         mqtt_topic_prefix: document.getElementById('device-mqtt-prefix').value || undefined,
+        mqtt_format: mqttFormat,
         poll_interval: parseFloat(document.getElementById('device-poll-interval').value),
         auto_start: document.getElementById('device-auto-start').checked
     };
     
-    fetch('/api/devices', {
-        method: 'POST',
+    // Check if we're in edit mode
+    const isEditMode = editingDeviceId !== null;
+    const url = isEditMode ? `/api/devices/${editingDeviceId}` : '/api/devices';
+    const method = isEditMode ? 'PUT' : 'POST';
+    const successMessage = isEditMode ? 'Device updated successfully!' : 'Device added successfully!';
+    
+    fetch(url, {
+        method: method,
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(deviceData)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showAlert('success', 'Device added successfully!');
-            document.getElementById('add-device-form').reset();
-            discoveredTags = [];
-            document.getElementById('discovered-tags-container').style.display = 'none';
-            updateDevicesList(true); // Force refresh after adding
+            showAlert('success', successMessage);
+            resetDeviceForm();
+            updateDevicesList(true); // Force refresh
             loadDashboard(); // Reload dashboard stats
         } else {
-            showAlert('danger', 'Error adding device: ' + data.error);
+            showAlert('danger', `Error ${isEditMode ? 'updating' : 'adding'} device: ` + data.error);
         }
     })
     .catch(error => {
-        console.error('Error adding device:', error);
-        showAlert('danger', 'Error adding device');
+        console.error(`Error ${isEditMode ? 'updating' : 'adding'} device:`, error);
+        showAlert('danger', `Error ${isEditMode ? 'updating' : 'adding'} device`);
     });
 }
 
@@ -511,6 +525,94 @@ function deleteDevice(deviceId, deviceName) {
             }
         })
         .catch(error => console.error('Error deleting device:', error));
+}
+
+function editDevice(deviceId) {
+    // Fetch device details
+    fetch(`/api/devices/${deviceId}`)
+        .then(response => response.json())
+        .then(device => {
+            // Populate form with device data
+            document.getElementById('device-name').value = device.name;
+            document.getElementById('device-host').value = device.host;
+            document.getElementById('device-slot').value = device.slot;
+            document.getElementById('device-hardware-id').value = device.hardware_id || '';
+            document.getElementById('device-mqtt-prefix').value = device.mqtt_topic_prefix;
+            document.getElementById('device-poll-interval').value = device.poll_interval;
+            document.getElementById('device-auto-start').checked = device.auto_start;
+            
+            // Set MQTT format radio button
+            const formatRadio = document.getElementById(device.mqtt_format === 'string' ? 'format-string' : 'format-json');
+            if (formatRadio) formatRadio.checked = true;
+            
+            // Store tags
+            discoveredTags = device.tags.map(tag => tag.name);
+            if (discoveredTags.length > 0) {
+                displayDiscoveredTags(discoveredTags);
+                document.getElementById('tag-discovery-status').innerHTML = 
+                    `<i class="bi bi-info-circle text-info"></i> ${discoveredTags.length} tags loaded`;
+            }
+            
+            // Set edit mode
+            editingDeviceId = deviceId;
+            
+            // Update form UI to show edit mode
+            const formHeader = document.querySelector('#devices-view .card-header h5');
+            formHeader.innerHTML = '<i class="bi bi-pencil-square"></i> Edit Device';
+            formHeader.parentElement.classList.remove('bg-success');
+            formHeader.parentElement.classList.add('bg-warning');
+            
+            const submitBtn = document.querySelector('#add-device-form button[type="submit"]');
+            submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Update Device';
+            submitBtn.className = 'btn btn-warning w-100';
+            
+            // Add cancel button if it doesn't exist
+            if (!document.getElementById('cancel-edit-btn')) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.id = 'cancel-edit-btn';
+                cancelBtn.className = 'btn btn-secondary w-100 mt-2';
+                cancelBtn.innerHTML = '<i class="bi bi-x-lg"></i> Cancel';
+                cancelBtn.onclick = resetDeviceForm;
+                submitBtn.parentElement.appendChild(cancelBtn);
+            }
+            
+            // Scroll to form
+            document.querySelector('#devices-view .card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            showAlert('info', `Editing device: ${device.name}`);
+        })
+        .catch(error => {
+            console.error('Error loading device:', error);
+            showAlert('danger', 'Error loading device details');
+        });
+}
+
+function resetDeviceForm() {
+    // Reset form
+    document.getElementById('add-device-form').reset();
+    
+    // Clear edit mode
+    editingDeviceId = null;
+    discoveredTags = [];
+    document.getElementById('discovered-tags-container').style.display = 'none';
+    document.getElementById('tag-discovery-status').innerHTML = 'Auto-discover tags from device';
+    
+    // Reset form UI
+    const formHeader = document.querySelector('#devices-view .card-header h5');
+    formHeader.innerHTML = '<i class="bi bi-plus-circle"></i> Add New Device';
+    formHeader.parentElement.classList.remove('bg-warning');
+    formHeader.parentElement.classList.add('bg-success');
+    
+    const submitBtn = document.querySelector('#add-device-form button[type="submit"]');
+    submitBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Device';
+    submitBtn.className = 'btn btn-success w-100';
+    
+    // Remove cancel button
+    const cancelBtn = document.getElementById('cancel-edit-btn');
+    if (cancelBtn) {
+        cancelBtn.remove();
+    }
 }
 
 function startAllDevices() {
@@ -676,56 +778,104 @@ function updateLiveData() {
                 return;
             }
             
-            let html = '';
-            devices.forEach(device => {
+            let html = '<div class="accordion" id="liveDataAccordion">';
+            
+            devices.forEach((device, index) => {
+                const statusBadge = device.connected 
+                    ? '<span class="badge bg-success">Connected</span>'
+                    : '<span class="badge bg-secondary">Offline</span>';
+                
                 html += `
-                    <div class="card mb-3" data-live-device="${device.device_id}">
-                        <div class="card-header bg-primary text-white">
-                            <h6 class="mb-0"><i class="bi bi-hdd-rack"></i> ${device.device_name}</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
+                    <div class="accordion-item" data-live-device="${device.device_id}">
+                        <h2 class="accordion-header" id="liveHeading${index}">
+                            <button class="accordion-button ${index === 0 ? '' : 'collapsed'}" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#liveCollapse${index}">
+                                <i class="bi bi-hdd-rack me-2"></i> ${device.device_name} ${statusBadge} 
+                                <span class="badge bg-info ms-2">${device.tags.length} tags</span>
+                            </button>
+                        </h2>
+                        <div id="liveCollapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" 
+                             data-bs-parent="#liveDataAccordion">
+                            <div class="accordion-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Tag Name</th>
+                                                <th>Value</th>
+                                                <th>Data Type</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
                 `;
                 
                 device.tags.forEach(tag => {
                     html += `
-                        <div class="col-md-4 mb-3">
-                            <div class="tag-item" data-tag-name="${tag.name}">
-                                <div class="tag-name">${tag.name}</div>
-                                <div class="tag-value">${JSON.stringify(tag.value)}</div>
-                                <div class="tag-type">${tag.type}</div>
-                            </div>
-                        </div>
+                        <tr data-tag-name="${tag.name}">
+                            <td><code>${tag.name}</code></td>
+                            <td class="tag-value fw-bold text-primary">${JSON.stringify(tag.value)}</td>
+                            <td><span class="badge bg-secondary">${tag.type}</span></td>
+                        </tr>
                     `;
                 });
                 
                 html += `
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
             });
             
+            html += '</div>';
             container.innerHTML = html;
         })
         .catch(error => console.error('Error updating live data:', error));
 }
 
-function updateLiveDataValuesOnly(data) {
-    if (!data || !data.devices) return;
+function updateLiveDataValuesOnly(devices) {
+    if (!devices || !Array.isArray(devices)) {
+        // Handle if data is wrapped in an object
+        if (devices && devices.devices) {
+            devices = devices.devices;
+        } else {
+            return;
+        }
+    }
     
-    data.devices.forEach(device => {
-        const deviceCard = document.querySelector(`[data-live-device="${device.device_id}"]`);
-        if (!deviceCard || !device.last_data) return;
+    devices.forEach(device => {
+        const deviceSection = document.querySelector(`[data-live-device="${device.device_id}"]`);
+        if (!deviceSection) return;
+        
+        // Update status badge in accordion header
+        const accordionButton = deviceSection.querySelector('.accordion-button');
+        if (accordionButton) {
+            // Find and update status badge
+            const existingBadge = accordionButton.querySelector('.badge.bg-success, .badge.bg-secondary');
+            if (existingBadge) {
+                const newStatusClass = device.connected ? 'bg-success' : 'bg-secondary';
+                const newStatusText = device.connected ? 'Connected' : 'Offline';
+                
+                if (!existingBadge.classList.contains(newStatusClass)) {
+                    existingBadge.className = `badge ${newStatusClass}`;
+                    existingBadge.textContent = newStatusText;
+                }
+            }
+        }
+        
+        // Update tag values if last_data is available
+        if (!device.last_data) return;
         
         Object.keys(device.last_data).forEach(tagName => {
             const tagData = device.last_data[tagName];
             if (tagData.error) return;
             
-            const tagItem = deviceCard.querySelector(`[data-tag-name="${tagName}"]`);
-            if (!tagItem) return;
+            const tagRow = deviceSection.querySelector(`[data-tag-name="${tagName}"]`);
+            if (!tagRow) return;
             
-            const valueEl = tagItem.querySelector('.tag-value');
+            const valueEl = tagRow.querySelector('.tag-value');
             if (valueEl) {
                 const newValue = JSON.stringify(tagData.value);
                 if (valueEl.textContent !== newValue) {

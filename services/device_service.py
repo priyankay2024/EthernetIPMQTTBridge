@@ -14,7 +14,7 @@ class DeviceService:
     
     @staticmethod
     def create_device(name, host, slot, tags, mqtt_topic_prefix, poll_interval, 
-                     enabled=True, auto_start=True):
+                     enabled=True, auto_start=True, hardware_id=None, mqtt_format='json'):
         """
         Create a new device in the database
         
@@ -27,6 +27,8 @@ class DeviceService:
             poll_interval: Polling interval in seconds
             enabled: Whether device is enabled
             auto_start: Whether to auto-start device
+            hardware_id: Hardware identifier (HWID)
+            mqtt_format: MQTT publish format ('json' or 'string')
             
         Returns:
             Device: Created device object
@@ -39,7 +41,9 @@ class DeviceService:
                 name=name,
                 host=host,
                 slot=slot,
+                hardware_id=hardware_id,
                 mqtt_topic_prefix=mqtt_topic_prefix,
+                mqtt_format=mqtt_format,
                 poll_interval=poll_interval,
                 enabled=enabled,
                 auto_start=auto_start
@@ -99,8 +103,8 @@ class DeviceService:
                 return None
             
             # Update allowed fields
-            allowed_fields = ['name', 'host', 'slot', 'mqtt_topic_prefix', 
-                            'poll_interval', 'enabled', 'auto_start']
+            allowed_fields = ['name', 'host', 'slot', 'hardware_id', 'mqtt_topic_prefix', 
+                            'mqtt_format', 'poll_interval', 'enabled', 'auto_start']
             
             for field, value in kwargs.items():
                 if field in allowed_fields and value is not None:
