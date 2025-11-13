@@ -52,13 +52,19 @@
                         <li class="nav-item mb-2">
                             <button class="nav-link w-100 text-start" id="data-tab" data-bs-toggle="tab" 
                                     data-bs-target="#data-view" type="button" role="tab">
-                                <i class="bi bi-bar-chart-line"></i> Device Data
+                                <i class="bi bi-bar-chart-line"></i> Live Device Data
                             </button>
                         </li>
                         <li class="nav-item mb-2">
                             <button class="nav-link w-100 text-start" id="tagmap-tab" data-bs-toggle="tab" 
                                     data-bs-target="#tagmap-view" type="button" role="tab">
                                 <i class="bi bi-tags"></i> Tag Map
+                            </button>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <button class="nav-link w-100 text-start" id="virtual-devices-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#virtual-devices-view" type="button" role="tab">
+                                <i class="bi bi-diagram-2"></i> Virtual Device
                             </button>
                         </li>
                     </ul>
@@ -78,8 +84,16 @@
                             <div class="col-md-3">
                                 <div class="card text-white bg-primary">
                                     <div class="card-body">
-                                        <h5 class="card-title"><i class="bi bi-hdd-network"></i> Total Devices</h5>
+                                        <h5 class="card-title"><i class="bi bi-hdd-network"></i> Physical Devices</h5>
                                         <h2 class="card-text" id="stats-total-devices">0</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-white bg-purple" style="background-color: #6f42c1 !important;">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><i class="bi bi-diagram-2"></i> Virtual Devices</h5>
+                                        <h2 class="card-text" id="stats-virtual-devices">0</h2>
                                     </div>
                                 </div>
                             </div>
@@ -94,16 +108,8 @@
                             <div class="col-md-3">
                                 <div class="card text-white bg-info">
                                     <div class="card-body">
-                                        <h5 class="card-title"><i class="bi bi-send"></i> Messages Sent</h5>
-                                        <h2 class="card-text" id="stats-total-messages">0</h2>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card text-white bg-warning">
-                                    <div class="card-body">
-                                        <h5 class="card-title"><i class="bi bi-clock"></i> Last Comm</h5>
-                                        <p class="card-text small" id="stats-last-comm">Never</p>
+                                        <h5 class="card-title"><i class="bi bi-clock"></i> Last Communication</h5>
+                                        <h2 class="card-text pt-3" id="stats-last-comm" style="font-size: 1.5rem;">Never</h2>
                                     </div>
                                 </div>
                             </div>
@@ -215,6 +221,10 @@
                                         </div>
                                     </div>
                                     <div class="card-body">
+                                        <div class="mb-3">
+                                            <input type="text" class="form-control" id="device-search-input" 
+                                                   placeholder="🔍 Search by name, HWID, or IP address...">
+                                        </div>
                                         <div id="devices-list">
                                             <p class="text-muted text-center py-4">No devices configured</p>
                                         </div>
@@ -311,6 +321,10 @@
                                 <h5 class="mb-0"><i class="bi bi-activity"></i> Real-Time Tag Values</h5>
                             </div>
                             <div class="card-body">
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="livedata-search-input" 
+                                           placeholder="🔍 Search by device name, HWID, or tag name...">
+                                </div>
                                 <div id="live-data-container">
                                     <p class="text-muted text-center py-4">No live data available</p>
                                 </div>
@@ -327,8 +341,95 @@
                                 <h5 class="mb-0"><i class="bi bi-diagram-3"></i> All Tags by Device</h5>
                             </div>
                             <div class="card-body">
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="tagmap-search-input" 
+                                           placeholder="🔍 Search by device name, HWID, or tag name...">
+                                </div>
                                 <div id="tagmap-container">
                                     <p class="text-muted text-center py-4">No tags configured</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Virtual Device Mapping View -->
+                    <div class="tab-pane fade" id="virtual-devices-view" role="tabpanel">
+                        <h2 class="mb-4"><i class="bi bi-diagram-2"></i> Virtual Device Mapping</h2>
+                        
+                        <div class="row">
+                            <!-- Add Virtual Device Form -->
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Virtual Device</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="add-virtual-device-form">
+                                            <div class="mb-3">
+                                                <label class="form-label">Virtual Device Name *</label>
+                                                <input type="text" class="form-control" id="vdev-name" required>
+                                                <small class="text-muted">Unique name for this virtual device</small>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Hardware ID (HWID) *</label>
+                                                <input type="text" class="form-control" id="vdev-hwid" placeholder="VHW001" required>
+                                                <small class="text-muted">Unique identifier for MQTT publishing</small>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Parent Device *</label>
+                                                <select class="form-select" id="vdev-parent-device" required>
+                                                    <option value="">Select parent device...</option>
+                                                </select>
+                                                <small class="text-muted">Physical device to map tags from</small>
+                                            </div>
+                                            
+                                            <div class="mb-3" id="vdev-tags-container" style="display:none;">
+                                                <label class="form-label">Select Tags *</label>
+                                                <div class="input-group mb-2">
+                                                    <input type="text" class="form-control" id="vdev-tag-search" placeholder="Search tags...">
+                                                    <button class="btn btn-outline-secondary" type="button" id="vdev-select-all">
+                                                        <i class="bi bi-check-all"></i>
+                                                    </button>
+                                                </div>
+                                                <div id="vdev-tags-list" class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
+                                                    <!-- Tags will be loaded here -->
+                                                </div>
+                                                <small class="text-muted"><span id="vdev-selected-count">0</span> tags selected</small>
+                                            </div>
+                                            
+                                            <div class="mb-3 form-check">
+                                                <input type="checkbox" class="form-check-input" id="vdev-enabled" checked>
+                                                <label class="form-check-label" for="vdev-enabled">Enable device</label>
+                                            </div>
+                                            
+                                            <button type="submit" class="btn btn-success w-100" id="vdev-submit-btn">
+                                                <i class="bi bi-plus-lg"></i> Add Virtual Device
+                                            </button>
+                                            <button type="button" class="btn btn-secondary w-100 mt-2" id="vdev-cancel-btn" style="display:none;">
+                                                <i class="bi bi-x"></i> Cancel Edit
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Virtual Device List -->
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header bg-dark text-white">
+                                        <h5 class="mb-0"><i class="bi bi-list"></i> Virtual Devices</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <input type="text" class="form-control" id="vdev-search-input" 
+                                                   placeholder="🔍 Search by name, HWID, or parent device...">
+                                        </div>
+                                        <div id="virtual-devices-list">
+                                            <p class="text-muted text-center py-4">No virtual devices configured</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

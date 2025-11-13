@@ -17,9 +17,10 @@ def get_plc_manager():
 
 @devices_bp.route('', methods=['GET'])
 def get_devices():
-    """Get all devices"""
+    """Get all devices with optional search"""
     try:
         plc_manager = get_plc_manager()
+        search_text = request.args.get('search', '').lower()
         
         devices = DeviceService.get_all_devices()
         device_list = []
@@ -38,7 +39,18 @@ def get_devices():
                     'last_update': runtime_status['last_update']
                 })
             
-            device_list.append(device_dict)
+            # Apply search filter if provided
+            if search_text:
+                device_name = device.name.lower() if device.name else ''
+                device_hwid = device.hardware_id.lower() if device.hardware_id else ''
+                device_host = device.host.lower() if device.host else ''
+                
+                if (search_text in device_name or 
+                    search_text in device_hwid or 
+                    search_text in device_host):
+                    device_list.append(device_dict)
+            else:
+                device_list.append(device_dict)
         
         return jsonify(device_list)
         

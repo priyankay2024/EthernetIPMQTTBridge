@@ -79,6 +79,13 @@ body {
     overflow-y: auto;
 }
 
+/* Device Lists with Scrolling */
+#devices-list, #virtual-devices-list, #tagmap-container, #live-data-container {
+    max-height: 787px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
 .tag-item {
     padding: 12px;
     background-color: #f8f9fa;
@@ -186,27 +193,43 @@ body {
 /* Scrollbar Styles */
 .tag-values-container::-webkit-scrollbar,
 #tag-values::-webkit-scrollbar,
-#discovered-tags-list::-webkit-scrollbar {
+#discovered-tags-list::-webkit-scrollbar,
+#devices-list::-webkit-scrollbar,
+#virtual-devices-list::-webkit-scrollbar,
+#tagmap-container::-webkit-scrollbar,
+#live-data-container::-webkit-scrollbar {
     width: 8px;
 }
 
 .tag-values-container::-webkit-scrollbar-track,
 #tag-values::-webkit-scrollbar-track,
-#discovered-tags-list::-webkit-scrollbar-track {
+#discovered-tags-list::-webkit-scrollbar-track,
+#devices-list::-webkit-scrollbar-track,
+#virtual-devices-list::-webkit-scrollbar-track,
+#tagmap-container::-webkit-scrollbar-track,
+#live-data-container::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
 }
 
 .tag-values-container::-webkit-scrollbar-thumb,
 #tag-values::-webkit-scrollbar-thumb,
-#discovered-tags-list::-webkit-scrollbar-thumb {
+#discovered-tags-list::-webkit-scrollbar-thumb,
+#devices-list::-webkit-scrollbar-thumb,
+#virtual-devices-list::-webkit-scrollbar-thumb,
+#tagmap-container::-webkit-scrollbar-thumb,
+#live-data-container::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
 }
 
 .tag-values-container::-webkit-scrollbar-thumb:hover,
 #tag-values::-webkit-scrollbar-thumb:hover,
-#discovered-tags-list::-webkit-scrollbar-thumb:hover {
+#discovered-tags-list::-webkit-scrollbar-thumb:hover,
+#devices-list::-webkit-scrollbar-thumb:hover,
+#virtual-devices-list::-webkit-scrollbar-thumb:hover,
+#tagmap-container::-webkit-scrollbar-thumb:hover,
+#live-data-container::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
 

@@ -81,6 +81,11 @@ class DeviceService:
         return Device.query.get(db_id)
     
     @staticmethod
+    def get_device_by_id(device_id):
+        """Get device by database ID (alias for compatibility)"""
+        return Device.query.get(device_id)
+    
+    @staticmethod
     def get_all_devices():
         """Get all devices"""
         return Device.query.all()

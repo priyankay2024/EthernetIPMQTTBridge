@@ -197,7 +197,11 @@ class MQTTClientService:
         Returns:
             bool: True if published successfully
         """
-        topic = f"{topic_prefix}data"
+        # Ensure topic_prefix ends with /
+        if not topic_prefix.endswith('/'):
+            topic_prefix = topic_prefix + '/'
+        
+        topic = f"{topic_prefix}"+str(hardware_id)
         timestamp = datetime.utcnow().isoformat()
         
         # Build payload with HWID and Timestamp
@@ -232,7 +236,11 @@ class MQTTClientService:
         Returns:
             bool: True if published successfully
         """
-        topic = f"{topic_prefix}data"
+        # Ensure topic_prefix ends with /
+        if not topic_prefix.endswith('/'):
+            topic_prefix = topic_prefix + '/'
+        
+        topic = f"{topic_prefix}"+str(hardware_id)
         timestamp = datetime.utcnow().isoformat()
         
         # Build string with tag values

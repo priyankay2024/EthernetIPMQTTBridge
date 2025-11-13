@@ -143,17 +143,66 @@ class PLCConnection:
     def _publish_data(self, data):
         """Publish data to MQTT using configured format"""
         try:
-            success = self.mqtt_service.publish_device_data(
-                device_id=self.device_id,
-                device_name=self.name,
-                tag_data=data,
-                topic_prefix=self.mqtt_topic_prefix,
-                hardware_id=self.hardware_id,
-                mqtt_format=self.mqtt_format
-            )
+            # Check if this device has virtual children with app context
+            has_virtual_devices = False
+            virtual_devices = []
             
-            if success:
-                self.message_count += 1
+            if self.flask_app:
+                try:
+                    with self.flask_app.app_context():
+                        from services import VirtualDeviceService
+                        from models import Device
+                        
+                        # Get the device database ID
+                        device = Device.query.filter_by(device_id=self.device_id).first()
+                        if device:
+                            virtual_devices = VirtualDeviceService.get_virtual_devices_by_parent(device.id)
+                            has_virtual_devices = len(virtual_devices) > 0
+                except Exception as e:
+                    logger.warning(f"Failed to check virtual devices for {self.name}: {e}")
+            
+            # If no virtual devices, publish to parent device's HWID
+            if not has_virtual_devices:
+                success = self.mqtt_service.publish_device_data(
+                    device_id=self.device_id,
+                    device_name=self.name,
+                    tag_data=data,
+                    topic_prefix=self.mqtt_topic_prefix,
+                    hardware_id=self.hardware_id,
+                    mqtt_format=self.mqtt_format
+                )
+                
+                if success:
+                    self.message_count += 1
+            else:
+                # Publish to each enabled virtual device with its mapped tags
+                for vdev in virtual_devices:
+                    if not vdev.enabled:
+                        continue
+                    
+                    # Get tags mapped to this virtual device
+                    with self.flask_app.app_context():
+                        from services import VirtualDeviceService
+                        mapped_tags = VirtualDeviceService.get_virtual_device_tags(vdev.id)
+                        
+                        # Filter data to only include mapped tags
+                        filtered_data = {}
+                        for tag in mapped_tags:
+                            if tag.name in data:
+                                filtered_data[tag.name] = data[tag.name]
+                        
+                        if filtered_data:
+                            success = self.mqtt_service.publish_device_data(
+                                device_id=vdev.hardware_id,
+                                device_name=vdev.name,
+                                tag_data=filtered_data,
+                                topic_prefix=self.mqtt_topic_prefix,
+                                hardware_id=vdev.hardware_id,
+                                mqtt_format=self.mqtt_format
+                            )
+                            
+                            if success:
+                                self.message_count += 1
             
         except Exception as e:
             logger.error(f"Error publishing data for {self.name}: {e}")

@@ -78,14 +78,24 @@ def get_status():
 def get_dashboard_stats():
     """Get dashboard statistics"""
     try:
+        from services import VirtualDeviceService
+        
         mqtt_service, plc_manager = get_services()
         
         devices = DeviceService.get_all_devices()
         device_statuses = plc_manager.get_all_status()
         
+        # Include virtual devices in count
+        virtual_devices = VirtualDeviceService.get_all_virtual_devices()
+        
         total_devices = len(devices)
+        total_virtual_devices = len(virtual_devices)
         running_devices = sum(1 for d in device_statuses if d['running'])
         connected_devices = sum(1 for d in device_statuses if d['connected'])
+        
+        # Count enabled virtual devices
+        enabled_virtual_devices = sum(1 for vd in virtual_devices if vd.enabled)
+        
         total_messages = sum(d.get('message_count', 0) for d in device_statuses)
         
         # Get last communication time
@@ -94,8 +104,11 @@ def get_dashboard_stats():
         
         return jsonify({
             'total_devices': total_devices,
+            'total_virtual_devices': total_virtual_devices,
+            'total_all_devices': total_devices + total_virtual_devices,
             'running_devices': running_devices,
             'connected_devices': connected_devices,
+            'enabled_virtual_devices': enabled_virtual_devices,
             'total_messages': total_messages,
             'last_comm_time': last_comm_time,
             'mqtt_connected': mqtt_service.connected

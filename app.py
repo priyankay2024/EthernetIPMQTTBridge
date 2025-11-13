@@ -10,7 +10,7 @@ import os
 from config import config
 from models import db, Device, MQTTConfig
 from services import MQTTClientService, PLCManager, DeviceService
-from routes import dashboard_bp, devices_bp, mqtt_bp, tags_bp
+from routes import dashboard_bp, devices_bp, mqtt_bp, tags_bp, virtual_devices_bp
 
 # Configure logging
 logging.basicConfig(
@@ -42,6 +42,7 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(devices_bp)
 app.register_blueprint(mqtt_bp)
 app.register_blueprint(tags_bp)
+app.register_blueprint(virtual_devices_bp)
 
 
 def initialize_app():

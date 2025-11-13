@@ -42,6 +42,42 @@ function setupEventListeners() {
     document.getElementById('start-all-devices').addEventListener('click', startAllDevices);
     document.getElementById('stop-all-devices').addEventListener('click', stopAllDevices);
     
+    // Device search
+    const deviceSearchInput = document.getElementById('device-search-input');
+    if (deviceSearchInput) {
+        let deviceSearchTimeout;
+        deviceSearchInput.addEventListener('input', (e) => {
+            clearTimeout(deviceSearchTimeout);
+            deviceSearchTimeout = setTimeout(() => {
+                updateDevicesList(true, e.target.value.trim());
+            }, 300); // Debounce for 300ms
+        });
+    }
+    
+    // Tag map search
+    const tagmapSearchInput = document.getElementById('tagmap-search-input');
+    if (tagmapSearchInput) {
+        let tagmapSearchTimeout;
+        tagmapSearchInput.addEventListener('input', (e) => {
+            clearTimeout(tagmapSearchTimeout);
+            tagmapSearchTimeout = setTimeout(() => {
+                displayTagMap(tagMapData, e.target.value.trim());
+            }, 300); // Debounce for 300ms
+        });
+    }
+    
+    // Live data search
+    const livedataSearchInput = document.getElementById('livedata-search-input');
+    if (livedataSearchInput) {
+        let livedataSearchTimeout;
+        livedataSearchInput.addEventListener('input', (e) => {
+            clearTimeout(livedataSearchTimeout);
+            livedataSearchTimeout = setTimeout(() => {
+                displayLiveData(liveDataCache, e.target.value.trim());
+            }, 300); // Debounce for 300ms
+        });
+    }
+    
     // MQTT form
     document.getElementById('mqtt-config-form').addEventListener('submit', handleMQTTConfig);
     document.getElementById('mqtt-connect-btn').addEventListener('click', connectMQTT);
@@ -111,6 +147,10 @@ function handleTabChange(event) {
         case 'tagmap-tab':
             loadTagMap();
             break;
+        case 'virtual-devices-tab':
+            loadVirtualDevices();
+            loadParentDeviceOptions();
+            break;
     }
 }
 
@@ -122,11 +162,14 @@ function loadDashboard() {
         .then(response => response.json())
         .then(data => {
             document.getElementById('stats-total-devices').textContent = data.total_devices || 0;
+            document.getElementById('stats-virtual-devices').textContent = data.total_virtual_devices || 0;
             document.getElementById('stats-connected-devices').textContent = data.connected_devices || 0;
             document.getElementById('stats-total-messages').textContent = data.total_messages || 0;
-            document.getElementById('stats-last-comm').textContent = data.last_comm_time 
-                ? formatDateTime(data.last_comm_time) 
-                : 'Never';
+            
+            const lastCommEl = document.getElementById('stats-last-comm');
+            if (lastCommEl) {
+                lastCommEl.textContent = data.last_comm_time ? formatDateTime(data.last_comm_time) : 'Never';
+            }
             
             updateMQTTStatusNav(data.mqtt_connected);
         })
@@ -238,18 +281,22 @@ function updateMQTTStatusNav(connected) {
 /**
  * Device functions
  */
-function updateDevicesList(forceRefresh = false) {
+function updateDevicesList(forceRefresh = false, searchText = '') {
     // Only do full refresh if forced or container is empty
     const container = document.getElementById('devices-list');
-    if (!forceRefresh && container.children.length > 0) {
+    if (!forceRefresh && container.children.length > 0 && !searchText) {
         return;
     }
     
-    fetch('/api/devices')
+    const url = searchText ? `/api/devices?search=${encodeURIComponent(searchText)}` : '/api/devices';
+    
+    fetch(url)
         .then(response => response.json())
         .then(devices => {
             if (!devices || devices.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center py-4">No devices configured</p>';
+                container.innerHTML = searchText 
+                    ? '<p class="text-muted text-center py-4">No devices found matching your search</p>'
+                    : '<p class="text-muted text-center py-4">No devices configured</p>';
                 return;
             }
             
@@ -295,6 +342,7 @@ function createDeviceCard(device) {
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
+                        <small><strong>Hardware ID (HWID):</strong> ${device.hardware_id || 'Not set'}</small><br>
                         <small><strong>MQTT Topic:</strong> ${device.mqtt_topic_prefix}</small><br>
                         <small><strong>Poll Interval:</strong> ${device.poll_interval}s</small><br>
                         <small><strong>Messages:</strong> <span class="device-msg-count">${device.message_count || 0}</span></small>
@@ -767,72 +815,114 @@ function updateMQTTStatus(connected) {
 /**
  * Live data functions
  */
+// Store live data for filtering
+let liveDataCache = [];
+
 function updateLiveData() {
     fetch('/api/tags/live')
         .then(response => response.json())
         .then(devices => {
-            const container = document.getElementById('live-data-container');
-            
-            if (!devices || devices.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center py-4">No live data available</p>';
-                return;
-            }
-            
-            let html = '<div class="accordion" id="liveDataAccordion">';
-            
-            devices.forEach((device, index) => {
-                const statusBadge = device.connected 
-                    ? '<span class="badge bg-success">Connected</span>'
-                    : '<span class="badge bg-secondary">Offline</span>';
-                
-                html += `
-                    <div class="accordion-item" data-live-device="${device.device_id}">
-                        <h2 class="accordion-header" id="liveHeading${index}">
-                            <button class="accordion-button ${index === 0 ? '' : 'collapsed'}" type="button" 
-                                    data-bs-toggle="collapse" data-bs-target="#liveCollapse${index}">
-                                <i class="bi bi-hdd-rack me-2"></i> ${device.device_name} ${statusBadge} 
-                                <span class="badge bg-info ms-2">${device.tags.length} tags</span>
-                            </button>
-                        </h2>
-                        <div id="liveCollapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" 
-                             data-bs-parent="#liveDataAccordion">
-                            <div class="accordion-body">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-striped table-hover">
-                                        <thead class="table-dark">
-                                            <tr>
-                                                <th>Tag Name</th>
-                                                <th>Value</th>
-                                                <th>Data Type</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                `;
-                
-                device.tags.forEach(tag => {
-                    html += `
-                        <tr data-tag-name="${tag.name}">
-                            <td><code>${tag.name}</code></td>
-                            <td class="tag-value fw-bold text-primary">${JSON.stringify(tag.value)}</td>
-                            <td><span class="badge bg-secondary">${tag.type}</span></td>
-                        </tr>
-                    `;
-                });
-                
-                html += `
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-            container.innerHTML = html;
+            liveDataCache = devices;
+            displayLiveData(devices);
         })
         .catch(error => console.error('Error updating live data:', error));
+}
+
+function displayLiveData(devices, searchText = '') {
+    const container = document.getElementById('live-data-container');
+    
+    if (!devices || devices.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-4">No live data available</p>';
+        return;
+    }
+    
+    // Filter devices and tags based on search text
+    let filteredDevices = devices;
+    if (searchText) {
+        const search = searchText.toLowerCase();
+        filteredDevices = devices.map(device => {
+            // Check if device name, HWID, or host matches
+            const deviceMatches = device.device_name.toLowerCase().includes(search) ||
+                                (device.hardware_id && device.hardware_id.toLowerCase().includes(search));
+            
+            // Filter tags that match the search
+            const filteredTags = device.tags.filter(tag => 
+                tag.name.toLowerCase().includes(search) ||
+                (tag.type && tag.type.toLowerCase().includes(search)) ||
+                (tag.value && JSON.stringify(tag.value).toLowerCase().includes(search))
+            );
+            
+            // Include device if it matches OR has matching tags
+            if (deviceMatches || filteredTags.length > 0) {
+                return {
+                    ...device,
+                    tags: filteredTags.length > 0 ? filteredTags : device.tags
+                };
+            }
+            return null;
+        }).filter(device => device !== null);
+    }
+    
+    if (filteredDevices.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-4">No matching devices or tags found</p>';
+        return;
+    }
+    
+    let html = '<div class="accordion" id="liveDataAccordion">';
+    
+    filteredDevices.forEach((device, index) => {
+        const statusBadge = device.connected 
+            ? '<span class="badge bg-success">Connected</span>'
+            : '<span class="badge bg-secondary">Offline</span>';
+        
+        const hwidText = device.hardware_id ? `<span class="text-muted ms-2">(${device.hardware_id})</span>` : '';
+        
+        html += `
+            <div class="accordion-item" data-live-device="${device.device_id}">
+                <h2 class="accordion-header" id="liveHeading${index}">
+                    <button class="accordion-button collapsed" type="button" 
+                            data-bs-toggle="collapse" data-bs-target="#liveCollapse${index}">
+                        <i class="bi bi-hdd-rack me-2"></i> ${device.device_name} ${hwidText} ${statusBadge} 
+                        <span class="badge bg-info ms-2">${device.tags.length} tags</span>
+                    </button>
+                </h2>
+                <div id="liveCollapse${index}" class="accordion-collapse collapse" 
+                     data-bs-parent="#liveDataAccordion">
+                    <div class="accordion-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Tag Name</th>
+                                        <th>Value</th>
+                                        <th>Data Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+        
+        device.tags.forEach(tag => {
+            html += `
+                <tr data-tag-name="${tag.name}">
+                    <td><code>${tag.name}</code></td>
+                    <td class="tag-value fw-bold text-primary">${JSON.stringify(tag.value)}</td>
+                    <td><span class="badge bg-secondary">${tag.type}</span></td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 function updateLiveDataValuesOnly(devices) {
@@ -892,75 +982,117 @@ function updateLiveDataValuesOnly(devices) {
 /**
  * Tag map functions
  */
+// Store tag map data for filtering
+let tagMapData = [];
+
 function loadTagMap() {
     fetch('/api/tags/map')
         .then(response => response.json())
         .then(devices => {
-            const container = document.getElementById('tagmap-container');
-            
-            if (!devices || devices.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center py-4">No tags configured</p>';
-                return;
-            }
-            
-            let html = '<div class="accordion" id="tagMapAccordion">';
-            
-            devices.forEach((device, index) => {
-                const statusBadge = device.connected 
-                    ? '<span class="badge bg-success">Connected</span>'
-                    : '<span class="badge bg-secondary">Offline</span>';
-                
-                html += `
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading${index}">
-                            <button class="accordion-button ${index === 0 ? '' : 'collapsed'}" type="button" 
-                                    data-bs-toggle="collapse" data-bs-target="#collapse${index}">
-                                ${device.device_name} ${statusBadge} 
-                                <span class="badge bg-info ms-2">${device.tags.length} tags</span>
-                            </button>
-                        </h2>
-                        <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" 
-                             data-bs-parent="#tagMapAccordion">
-                            <div class="accordion-body">
-                                <p><strong>Host:</strong> ${device.host}</p>
-                                <table class="table table-sm table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Tag Name</th>
-                                            <th>Data Type</th>
-                                            <th>Last Value</th>
-                                            <th>Last Read</th>
-                                            <th>Read Count</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                `;
-                
-                device.tags.forEach(tag => {
-                    html += `
-                        <tr>
-                            <td><code>${tag.name}</code></td>
-                            <td>${tag.data_type || '-'}</td>
-                            <td>${tag.live_value !== undefined ? JSON.stringify(tag.live_value) : (tag.last_value || '-')}</td>
-                            <td>${tag.last_read ? formatDateTime(tag.last_read) : 'Never'}</td>
-                            <td>${tag.read_count || 0}</td>
-                        </tr>
-                    `;
-                });
-                
-                html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-            container.innerHTML = html;
+            tagMapData = devices;
+            displayTagMap(devices);
         })
         .catch(error => console.error('Error loading tag map:', error));
+}
+
+function displayTagMap(devices, searchText = '') {
+    const container = document.getElementById('tagmap-container');
+    
+    if (!devices || devices.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-4">No tags configured</p>';
+        return;
+    }
+    
+    // Filter devices and tags based on search text
+    let filteredDevices = devices;
+    if (searchText) {
+        const search = searchText.toLowerCase();
+        filteredDevices = devices.map(device => {
+            // Check if device name, HWID, or host matches
+            const deviceMatches = device.device_name.toLowerCase().includes(search) ||
+                                (device.hardware_id && device.hardware_id.toLowerCase().includes(search)) ||
+                                device.host.toLowerCase().includes(search);
+            
+            // Filter tags that match the search
+            const filteredTags = device.tags.filter(tag => 
+                tag.name.toLowerCase().includes(search) ||
+                (tag.data_type && tag.data_type.toLowerCase().includes(search))
+            );
+            
+            // Include device if it matches OR has matching tags
+            if (deviceMatches || filteredTags.length > 0) {
+                return {
+                    ...device,
+                    tags: filteredTags.length > 0 ? filteredTags : device.tags
+                };
+            }
+            return null;
+        }).filter(device => device !== null);
+    }
+    
+    if (filteredDevices.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-4">No matching devices or tags found</p>';
+        return;
+    }
+    
+    let html = '<div class="accordion" id="tagMapAccordion">';
+    
+    filteredDevices.forEach((device, index) => {
+        const statusBadge = device.connected 
+            ? '<span class="badge bg-success">Connected</span>'
+            : '<span class="badge bg-secondary">Offline</span>';
+        
+        const hwidText = device.hardware_id ? `<span class="text-muted ms-2">(${device.hardware_id})</span>` : '';
+        
+        html += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading${index}">
+                    <button class="accordion-button collapsed" type="button" 
+                            data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                        ${device.device_name} ${hwidText} ${statusBadge} 
+                        <span class="badge bg-info ms-2">${device.tags.length} tags</span>
+                    </button>
+                </h2>
+                <div id="collapse${index}" class="accordion-collapse collapse" 
+                     data-bs-parent="#tagMapAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Host:</strong> ${device.host}</p>
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Tag Name</th>
+                                    <th>Data Type</th>
+                                    <th>Last Value</th>
+                                    <th>Last Read</th>
+                                    <th>Read Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+        
+        device.tags.forEach(tag => {
+            html += `
+                <tr>
+                    <td><code>${tag.name}</code></td>
+                    <td>${tag.data_type || '-'}</td>
+                    <td>${tag.live_value !== undefined ? JSON.stringify(tag.live_value) : (tag.last_value || '-')}</td>
+                    <td>${tag.last_read ? formatDateTime(tag.last_read) : 'Never'}</td>
+                    <td>${tag.read_count || 0}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 /**
@@ -993,4 +1125,473 @@ function showAlert(type, message) {
     setTimeout(() => {
         alertDiv.remove();
     }, 5000);
+}
+
+/**
+ * ========================================================================
+ * VIRTUAL DEVICE MANAGEMENT
+ * ========================================================================
+ */
+
+// Global variables for virtual devices
+let editingVirtualDeviceId = null;
+let selectedTags = new Set();
+let parentDeviceTags = [];
+
+// Initialize virtual device event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Add virtual device event listeners
+    const vdevForm = document.getElementById('add-virtual-device-form');
+    if (vdevForm) {
+        vdevForm.addEventListener('submit', handleAddVirtualDevice);
+    }
+    
+    const parentSelect = document.getElementById('vdev-parent-device');
+    if (parentSelect) {
+        parentSelect.addEventListener('change', handleParentDeviceChange);
+    }
+    
+    const tagSearch = document.getElementById('vdev-tag-search');
+    if (tagSearch) {
+        tagSearch.addEventListener('input', filterVirtualDeviceTags);
+    }
+    
+    const selectAllBtn = document.getElementById('vdev-select-all');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', toggleSelectAllTags);
+    }
+    
+    const cancelBtn = document.getElementById('vdev-cancel-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', cancelVirtualDeviceEdit);
+    }
+    
+    // Virtual device search functionality with debouncing
+    const vdevSearchInput = document.getElementById('vdev-search-input');
+    if (vdevSearchInput) {
+        let vdevSearchTimeout;
+        vdevSearchInput.addEventListener('input', (e) => {
+            clearTimeout(vdevSearchTimeout);
+            vdevSearchTimeout = setTimeout(() => {
+                loadVirtualDevices(e.target.value.trim());
+            }, 300);
+        });
+    }
+});
+
+/**
+ * Load all virtual devices
+ */
+function loadVirtualDevices(searchText = '') {
+    const url = searchText ? `/api/virtual-devices?search=${encodeURIComponent(searchText)}` : '/api/virtual-devices';
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            displayVirtualDevicesList(data, searchText);
+        })
+        .catch(error => {
+            console.error('Error loading virtual devices:', error);
+            showAlert('danger', 'Failed to load virtual devices');
+        });
+}
+
+/**
+ * Display virtual devices list
+ */
+function displayVirtualDevicesList(virtualDevices, searchText = '') {
+    const container = document.getElementById('virtual-devices-list');
+    
+    if (!virtualDevices || virtualDevices.length === 0) {
+        container.innerHTML = searchText 
+            ? '<p class="text-muted text-center py-4">No virtual devices found matching your search</p>'
+            : '<p class="text-muted text-center py-4">No virtual devices configured</p>';
+        return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-hover">';
+    html += '<thead><tr>';
+    html += '<th>Name</th>';
+    html += '<th>HWID</th>';
+    html += '<th>Parent Device</th>';
+    html += '<th>Tag Count</th>';
+    html += '<th>Status</th>';
+    html += '<th>Actions</th>';
+    html += '</tr></thead><tbody>';
+    
+    virtualDevices.forEach(vdev => {
+        const statusClass = vdev.parent_connected && vdev.enabled ? 'success' : 'secondary';
+        const statusText = vdev.parent_connected && vdev.enabled ? 'Connected' : 'Stopped';
+        
+        html += `<tr id="vdev-row-${vdev.id}">`;
+        html += `<td><strong>${escapeHtml(vdev.name)}</strong></td>`;
+        html += `<td><code>${escapeHtml(vdev.hardware_id)}</code></td>`;
+        html += `<td>${escapeHtml(vdev.parent_device_name || 'N/A')}</td>`;
+        html += `<td><span class="badge bg-info">${vdev.tag_count}</span></td>`;
+        html += `<td><span class="badge bg-${statusClass}">${statusText}</span></td>`;
+        html += `<td>`;
+        
+        if (vdev.enabled) {
+            html += `<button class="btn btn-warning btn-sm me-1" onclick="stopVirtualDevice(${vdev.id})" title="Stop">
+                        <i class="bi bi-stop-fill"></i>
+                     </button>`;
+        } else {
+            html += `<button class="btn btn-success btn-sm me-1" onclick="startVirtualDevice(${vdev.id})" title="Start">
+                        <i class="bi bi-play-fill"></i>
+                     </button>`;
+        }
+        
+        html += `<button class="btn btn-primary btn-sm me-1" onclick="editVirtualDevice(${vdev.id})" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                 </button>`;
+        html += `<button class="btn btn-danger btn-sm" onclick="deleteVirtualDevice(${vdev.id}, '${escapeHtml(vdev.name)}')" title="Delete">
+                    <i class="bi bi-trash"></i>
+                 </button>`;
+        
+        html += `</td></tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+/**
+ * Load parent device options for dropdown
+ */
+function loadParentDeviceOptions() {
+    fetch('/api/devices')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('vdev-parent-device');
+            select.innerHTML = '<option value="">Select parent device...</option>';
+            
+            data.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.id;
+                option.textContent = `${device.name} (${device.host})`;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading parent devices:', error);
+            showAlert('danger', 'Failed to load parent devices');
+        });
+}
+
+/**
+ * Handle parent device selection change
+ */
+function handleParentDeviceChange(event) {
+    const parentId = event.target.value;
+    const tagsContainer = document.getElementById('vdev-tags-container');
+    
+    if (!parentId) {
+        tagsContainer.style.display = 'none';
+        return;
+    }
+    
+    // Load tags from parent device
+    fetch(`/api/virtual-devices/tags/${parentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                parentDeviceTags = data.tags;
+                displayParentTags(data.tags);
+                tagsContainer.style.display = 'block';
+            } else {
+                showAlert('warning', 'No tags found for this device');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading parent tags:', error);
+            showAlert('danger', 'Failed to load parent device tags');
+        });
+}
+
+/**
+ * Display parent device tags for selection
+ */
+function displayParentTags(tags) {
+    const container = document.getElementById('vdev-tags-list');
+    selectedTags.clear();
+    
+    if (!tags || tags.length === 0) {
+        container.innerHTML = '<p class="text-muted small p-2">No tags available</p>';
+        updateSelectedCount();
+        return;
+    }
+    
+    let html = '';
+    tags.forEach(tag => {
+        html += `
+            <div class="form-check">
+                <input class="form-check-input vdev-tag-checkbox" type="checkbox" 
+                       value="${tag.id}" id="tag-${tag.id}" 
+                       onchange="updateTagSelection(${tag.id})">
+                <label class="form-check-label" for="tag-${tag.id}">
+                    ${escapeHtml(tag.name)}
+                    ${tag.data_type ? `<span class="badge bg-secondary ms-1">${tag.data_type}</span>` : ''}
+                </label>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    updateSelectedCount();
+}
+
+/**
+ * Update tag selection
+ */
+function updateTagSelection(tagId) {
+    const checkbox = document.getElementById(`tag-${tagId}`);
+    if (checkbox.checked) {
+        selectedTags.add(tagId);
+    } else {
+        selectedTags.delete(tagId);
+    }
+    updateSelectedCount();
+}
+
+/**
+ * Update selected tags count
+ */
+function updateSelectedCount() {
+    document.getElementById('vdev-selected-count').textContent = selectedTags.size;
+}
+
+/**
+ * Toggle select all tags
+ */
+function toggleSelectAllTags() {
+    const checkboxes = document.querySelectorAll('.vdev-tag-checkbox');
+    const allSelected = selectedTags.size === parentDeviceTags.length;
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = !allSelected;
+        const tagId = parseInt(checkbox.value);
+        if (!allSelected) {
+            selectedTags.add(tagId);
+        } else {
+            selectedTags.delete(tagId);
+        }
+    });
+    
+    updateSelectedCount();
+}
+
+/**
+ * Filter tags by search
+ */
+function filterVirtualDeviceTags() {
+    const searchTerm = document.getElementById('vdev-tag-search').value.toLowerCase();
+    const checkboxes = document.querySelectorAll('.vdev-tag-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        const label = checkbox.parentElement;
+        const tagName = label.textContent.toLowerCase();
+        label.style.display = tagName.includes(searchTerm) ? 'block' : 'none';
+    });
+}
+
+/**
+ * Handle add/edit virtual device form submission
+ */
+function handleAddVirtualDevice(event) {
+    event.preventDefault();
+    
+    const name = document.getElementById('vdev-name').value;
+    const hwid = document.getElementById('vdev-hwid').value;
+    const parentDeviceId = document.getElementById('vdev-parent-device').value;
+    const enabled = document.getElementById('vdev-enabled').checked;
+    
+    if (!parentDeviceId) {
+        showAlert('warning', 'Please select a parent device');
+        return;
+    }
+    
+    if (selectedTags.size === 0) {
+        showAlert('warning', 'Please select at least one tag');
+        return;
+    }
+    
+    const data = {
+        name: name,
+        hardware_id: hwid,
+        parent_device_id: parseInt(parentDeviceId),
+        tag_ids: Array.from(selectedTags),
+        enabled: enabled
+    };
+    
+    const url = editingVirtualDeviceId 
+        ? `/api/virtual-devices/${editingVirtualDeviceId}`
+        : '/api/virtual-devices';
+    const method = editingVirtualDeviceId ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('success', editingVirtualDeviceId 
+                ? 'Virtual device updated successfully' 
+                : 'Virtual device created successfully');
+            resetVirtualDeviceForm();
+            loadVirtualDevices();
+        } else {
+            showAlert('danger', result.error || 'Failed to save virtual device');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving virtual device:', error);
+        showAlert('danger', 'Failed to save virtual device');
+    });
+}
+
+/**
+ * Edit virtual device
+ */
+function editVirtualDevice(vdevId) {
+    editingVirtualDeviceId = vdevId;
+    
+    fetch(`/api/virtual-devices/${vdevId}`)
+        .then(response => response.json())
+        .then(vdev => {
+            // Populate form
+            document.getElementById('vdev-name').value = vdev.name;
+            document.getElementById('vdev-hwid').value = vdev.hardware_id;
+            document.getElementById('vdev-parent-device').value = vdev.parent_device_id;
+            document.getElementById('vdev-enabled').checked = vdev.enabled;
+            
+            // Load tags and pre-select
+            handleParentDeviceChange({target: {value: vdev.parent_device_id}});
+            
+            // Wait for tags to load, then select them
+            setTimeout(() => {
+                selectedTags.clear();
+                vdev.tags.forEach(tag => {
+                    selectedTags.add(tag.tag_id);
+                    const checkbox = document.getElementById(`tag-${tag.tag_id}`);
+                    if (checkbox) checkbox.checked = true;
+                });
+                updateSelectedCount();
+            }, 500);
+            
+            // Update button text
+            document.getElementById('vdev-submit-btn').innerHTML = '<i class="bi bi-save"></i> Update Virtual Device';
+            document.getElementById('vdev-cancel-btn').style.display = 'block';
+            
+            // Scroll to form
+            document.getElementById('add-virtual-device-form').scrollIntoView({behavior: 'smooth'});
+        })
+        .catch(error => {
+            console.error('Error loading virtual device:', error);
+            showAlert('danger', 'Failed to load virtual device');
+        });
+}
+
+/**
+ * Delete virtual device
+ */
+function deleteVirtualDevice(vdevId, vdevName) {
+    if (!confirm(`Are you sure you want to delete virtual device "${vdevName}"?`)) {
+        return;
+    }
+    
+    fetch(`/api/virtual-devices/${vdevId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('success', 'Virtual device deleted successfully');
+            loadVirtualDevices();
+        } else {
+            showAlert('danger', result.error || 'Failed to delete virtual device');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting virtual device:', error);
+        showAlert('danger', 'Failed to delete virtual device');
+    });
+}
+
+/**
+ * Start virtual device
+ */
+function startVirtualDevice(vdevId) {
+    fetch(`/api/virtual-devices/start/${vdevId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('success', 'Virtual device started');
+            loadVirtualDevices();
+        } else {
+            showAlert('danger', result.error || 'Failed to start virtual device');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting virtual device:', error);
+        showAlert('danger', 'Failed to start virtual device');
+    });
+}
+
+/**
+ * Stop virtual device
+ */
+function stopVirtualDevice(vdevId) {
+    fetch(`/api/virtual-devices/stop/${vdevId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('success', 'Virtual device stopped');
+            loadVirtualDevices();
+        } else {
+            showAlert('danger', result.error || 'Failed to stop virtual device');
+        }
+    })
+    .catch(error => {
+        console.error('Error stopping virtual device:', error);
+        showAlert('danger', 'Failed to stop virtual device');
+    });
+}
+
+/**
+ * Cancel virtual device edit
+ */
+function cancelVirtualDeviceEdit() {
+    resetVirtualDeviceForm();
+}
+
+/**
+ * Reset virtual device form
+ */
+function resetVirtualDeviceForm() {
+    editingVirtualDeviceId = null;
+    selectedTags.clear();
+    
+    document.getElementById('add-virtual-device-form').reset();
+    document.getElementById('vdev-tags-container').style.display = 'none';
+    document.getElementById('vdev-submit-btn').innerHTML = '<i class="bi bi-plus-lg"></i> Add Virtual Device';
+    document.getElementById('vdev-cancel-btn').style.display = 'none';
+    
+    updateSelectedCount();
+}
+
+/**
+ * HTML escape utility
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
