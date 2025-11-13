@@ -80,8 +80,21 @@
                     <div class="tab-content" id="main-content">
                         <!-- Dashboard View -->
                         <div class="tab-pane fade show active" id="dashboard-view" role="tabpanel">
-                            <div class="navbar-heading">
-                                <h2 class=""><i class="bi bi-speedometer2"></i> Dashboard</h2>
+                            <div class="navbar-heading d-flex justify-content-between align-items-center">
+                                <h2 class="mb-0"><i class="bi bi-speedometer2"></i> Dashboard</h2>
+                                <div class="dropdown">
+                                    <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
+                                            A
+                                        </div>
+                                        <span>Admin</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                        <li><h6 class="dropdown-header">Signed in as <strong>Admin</strong></h6></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                                    </ul>
+                                </div>
                             </div>
 
                             <!-- Stats Cards -->
@@ -138,8 +151,21 @@
 
                         <!-- Device Configuration View -->
                         <div class="tab-pane fade" id="devices-view" role="tabpanel">
-                            <div class="navbar-heading">
-                                <h2 class=""><i class="bi bi-hdd-network"></i> Device Configuration</h2>
+                            <div class="navbar-heading d-flex justify-content-between align-items-center">
+                                <h2 class="mb-0"><i class="bi bi-hdd-network"></i> Device Configuration</h2>
+                                <div class="dropdown">
+                                    <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown2" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
+                                            A
+                                        </div>
+                                        <span>Admin</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown2">
+                                        <li><h6 class="dropdown-header">Signed in as <strong>Admin</strong></h6></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="row">
                                 <!-- Add Device Form -->
@@ -261,8 +287,21 @@
 
                         <!-- MQTT Configuration View -->
                         <div class="tab-pane fade" id="mqtt-view" role="tabpanel">
-                            <div class="navbar-heading">
-                                <h2 class=""><i class="bi bi-wifi"></i> MQTT Configuration</h2>
+                            <div class="navbar-heading d-flex justify-content-between align-items-center">
+                                <h2 class="mb-0"><i class="bi bi-wifi"></i> MQTT Configuration</h2>
+                                <div class="dropdown">
+                                    <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown3" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
+                                            A
+                                        </div>
+                                        <span>Admin</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown3">
+                                        <li><h6 class="dropdown-header">Signed in as <strong>Admin</strong></h6></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
@@ -343,8 +382,21 @@
 
                         <!-- Device Data View -->
                         <div class="tab-pane fade" id="data-view" role="tabpanel">
-                            <div class="navbar-heading">
-                                <h2 class=""><i class="bi bi-bar-chart-line"></i> Live Device Data</h2>
+                            <div class="navbar-heading d-flex justify-content-between align-items-center">
+                                <h2 class="mb-0"><i class="bi bi-bar-chart-line"></i> Live Device Data</h2>
+                                <div class="dropdown">
+                                    <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown4" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
+                                            A
+                                        </div>
+                                        <span>Admin</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown4">
+                                        <li><h6 class="dropdown-header">Signed in as <strong>Admin</strong></h6></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="card">
                                 <div class="card-header bg-info text-white">
@@ -364,8 +416,21 @@
 
                         <!-- Tag Map View -->
                         <div class="tab-pane fade" id="tagmap-view" role="tabpanel">
-                            <div class="navbar-heading">
-                                <h2 class=""><i class="bi bi-tags"></i> Tag Map</h2>
+                            <div class="navbar-heading d-flex justify-content-between align-items-center">
+                                <h2 class="mb-0"><i class="bi bi-tags"></i> Tag Map</h2>
+                                <div class="dropdown">
+                                    <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown5" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
+                                            A
+                                        </div>
+                                        <span>Admin</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown5">
+                                        <li><h6 class="dropdown-header">Signed in as <strong>Admin</strong></h6></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="card">
                                 <div class="card-header bg-info text-white">
@@ -385,8 +450,21 @@
 
                         <!-- Virtual Device Mapping View -->
                         <div class="tab-pane fade" id="virtual-devices-view" role="tabpanel">
-                            <div class="navbar-heading">
-                                <h2 class=""><i class="bi bi-diagram-2"></i> Virtual Device Mapping</h2>
+                            <div class="navbar-heading d-flex justify-content-between align-items-center">
+                                <h2 class="mb-0"><i class="bi bi-diagram-2"></i> Virtual Device Mapping</h2>
+                                <div class="dropdown">
+                                    <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown6" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
+                                            A
+                                        </div>
+                                        <span>Admin</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown6">
+                                        <li><h6 class="dropdown-header">Signed in as <strong>Admin</strong></h6></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="row">
                                 <!-- Add Virtual Device Form -->

@@ -10,7 +10,7 @@ import os
 from config import config
 from models import db, Device, MQTTConfig
 from services import MQTTClientService, PLCManager, DeviceService
-from routes import dashboard_bp, devices_bp, mqtt_bp, tags_bp, virtual_devices_bp
+from routes import dashboard_bp, devices_bp, mqtt_bp, tags_bp, virtual_devices_bp, auth_bp
 
 # Configure logging
 logging.basicConfig(
@@ -26,6 +26,9 @@ app = Flask(__name__)
 env = os.getenv('FLASK_ENV', 'development')
 app.config.from_object(config[env])
 
+# Set secret key for session management
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-12345')
+
 # Initialize extensions
 db.init_app(app)
 socketio = SocketIO(app, 
@@ -38,6 +41,7 @@ plc_manager = None
 device_service = None
 
 # Register blueprints
+app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(devices_bp)
 app.register_blueprint(mqtt_bp)

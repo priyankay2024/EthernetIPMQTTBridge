@@ -47,6 +47,15 @@ body {
     font-size: 0.9rem;
 }
 
+.dropdown-item:hover {
+    background-color: #f6490d1a;
+    color: var(--primary-color);
+}
+
+.card-text {
+    color: var(--background);
+}
+
 /* Sidebar */
 .sidebar {
     min-height: calc(100vh);

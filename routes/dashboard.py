@@ -3,6 +3,7 @@ Dashboard routes - main dashboard and status overview
 """
 from flask import Blueprint, render_template, jsonify
 from services import MQTTClientService, PLCManager, DeviceService
+from .auth import login_required
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,12 +17,14 @@ def get_services():
 
 
 @dashboard_bp.route('/')
+@login_required
 def index():
     """Main dashboard page"""
     return render_template('dashboard.html')
 
 
 @dashboard_bp.route('/api/status')
+@login_required
 def get_status():
     """Get overall system status"""
     try:
@@ -75,6 +78,7 @@ def get_status():
 
 
 @dashboard_bp.route('/api/dashboard/stats')
+@login_required
 def get_dashboard_stats():
     """Get dashboard statistics"""
     try:
