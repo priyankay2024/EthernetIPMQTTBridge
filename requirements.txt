@@ -1,8 +1,12 @@
 Flask==3.0.0
+Flask-SQLAlchemy==3.0.5
+Flask-SocketIO==5.3.4
 cpppo==5.2.5
 paho-mqtt==1.6.1
 python-dotenv==1.0.0
 gunicorn==21.2.0
+python-engineio==4.7.1
+python-socketio==5.9.0
 
 # Optional: Better tag enumeration for Allen-Bradley PLCs
 # Uncomment if using real PLCs (highly recommended)
