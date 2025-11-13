@@ -1049,7 +1049,7 @@ function displayTagMap(devices, searchText = '') {
                 <h2 class="accordion-header" id="heading${index}">
                     <button class="accordion-button collapsed" type="button" 
                             data-bs-toggle="collapse" data-bs-target="#collapse${index}">
-                        ${device.device_name} ${hwidText} ${statusBadge} 
+                        ${device.device_name}  ${hwidText}  ${statusBadge} 
                         <span class="badge bg-info ms-2">${device.tags.length} tags</span>
                     </button>
                 </h2>
@@ -1149,7 +1149,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const parentSelect = document.getElementById('vdev-parent-device');
     if (parentSelect) {
         parentSelect.addEventListener('change', handleParentDeviceChange);
+        parentSelect.addEventListener('click', function(e) {
+            if (e.target.tagName === 'OPTION' && e.target.value) {
+                handleParentDeviceChange({target: parentSelect});
+            }
+        });
     }
+    
+    const parentDeviceSearch = document.getElementById('vdev-parent-device-search');
+    if (parentDeviceSearch) {
+        parentDeviceSearch.addEventListener('input', filterParentDevices);
+        parentDeviceSearch.addEventListener('focus', showParentDeviceDropdown);
+        parentDeviceSearch.addEventListener('keydown', function(e) {
+            const select = document.getElementById('vdev-parent-device');
+            if (e.key === 'ArrowDown' && select.style.display === 'block') {
+                e.preventDefault();
+                select.focus();
+            }
+        });
+    }
+    
+    const clearParentSearchBtn = document.getElementById('vdev-clear-parent-search');
+    if (clearParentSearchBtn) {
+        clearParentSearchBtn.addEventListener('click', clearParentDeviceSelection);
+    }
+    
+    // Close parent device dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const parentSelect = document.getElementById('vdev-parent-device');
+        const parentSearch = document.getElementById('vdev-parent-device-search');
+        const clearBtn = document.getElementById('vdev-clear-parent-search');
+        
+        if (parentSelect && parentSearch && clearBtn) {
+            if (!parentSelect.contains(e.target) && 
+                !parentSearch.contains(e.target) && 
+                !clearBtn.contains(e.target)) {
+                parentSelect.style.display = 'none';
+            }
+        }
+    });
     
     const tagSearch = document.getElementById('vdev-tag-search');
     if (tagSearch) {
@@ -1269,6 +1307,9 @@ function loadParentDeviceOptions() {
                 const option = document.createElement('option');
                 option.value = device.id;
                 option.textContent = `${device.name} (${device.host})`;
+                option.dataset.name = device.name;
+                option.dataset.host = device.host;
+                option.dataset.hwid = device.hardware_id || '';
                 select.appendChild(option);
             });
         })
@@ -1279,16 +1320,104 @@ function loadParentDeviceOptions() {
 }
 
 /**
+ * Filter parent devices based on search input
+ */
+function filterParentDevices() {
+    const searchTerm = document.getElementById('vdev-parent-device-search').value.toLowerCase();
+    const select = document.getElementById('vdev-parent-device');
+    const options = select.querySelectorAll('option');
+    
+    let hasVisibleOptions = false;
+    
+    options.forEach(option => {
+        if (option.value === '') {
+            option.style.display = 'none';
+            return;
+        }
+        
+        const name = (option.dataset.name || '').toLowerCase();
+        const host = (option.dataset.host || '').toLowerCase();
+        const hwid = (option.dataset.hwid || '').toLowerCase();
+        const optionText = option.textContent.toLowerCase();
+        
+        const matches = name.includes(searchTerm) || 
+                       host.includes(searchTerm) || 
+                       hwid.includes(searchTerm) ||
+                       optionText.includes(searchTerm);
+        
+        option.style.display = matches ? 'block' : 'none';
+        if (matches) hasVisibleOptions = true;
+    });
+    
+    // Show dropdown if there's search text and visible options
+    if (searchTerm && hasVisibleOptions) {
+        select.style.display = 'block';
+    } else if (!searchTerm) {
+        select.style.display = 'none';
+    }
+}
+
+/**
+ * Show parent device dropdown on focus
+ */
+function showParentDeviceDropdown() {
+    const searchInput = document.getElementById('vdev-parent-device-search');
+    const select = document.getElementById('vdev-parent-device');
+    const valueInput = document.getElementById('vdev-parent-device-value');
+    
+    // If no device is selected, show all options
+    if (!valueInput.value && searchInput.value.trim() === '') {
+        const options = select.querySelectorAll('option');
+        options.forEach(option => {
+            if (option.value !== '') {
+                option.style.display = 'block';
+            }
+        });
+        select.style.display = 'block';
+    }
+}
+
+/**
+ * Clear parent device selection
+ */
+function clearParentDeviceSelection() {
+    document.getElementById('vdev-parent-device-search').value = '';
+    document.getElementById('vdev-parent-device-value').value = '';
+    document.getElementById('vdev-parent-device').value = '';
+    document.getElementById('vdev-parent-device').style.display = 'none';
+    document.getElementById('vdev-parent-device-selected').style.display = 'none';
+    document.getElementById('vdev-tags-container').style.display = 'none';
+    selectedTags.clear();
+    updateSelectedCount();
+}
+
+/**
  * Handle parent device selection change
  */
 function handleParentDeviceChange(event) {
     const parentId = event.target.value;
     const tagsContainer = document.getElementById('vdev-tags-container');
+    const select = document.getElementById('vdev-parent-device');
+    const searchInput = document.getElementById('vdev-parent-device-search');
+    const valueInput = document.getElementById('vdev-parent-device-value');
+    const selectedDiv = document.getElementById('vdev-parent-device-selected');
+    const selectedNameSpan = document.getElementById('vdev-parent-device-name');
     
     if (!parentId) {
         tagsContainer.style.display = 'none';
         return;
     }
+    
+    // Get selected option text
+    const selectedOption = select.options[select.selectedIndex];
+    const deviceName = selectedOption.textContent;
+    
+    // Update UI to show selection
+    searchInput.value = '';
+    valueInput.value = parentId;
+    select.style.display = 'none';
+    selectedDiv.style.display = 'block';
+    selectedNameSpan.textContent = deviceName;
     
     // Load tags from parent device
     fetch(`/api/virtual-devices/tags/${parentId}`)
@@ -1402,7 +1531,7 @@ function handleAddVirtualDevice(event) {
     
     const name = document.getElementById('vdev-name').value;
     const hwid = document.getElementById('vdev-hwid').value;
-    const parentDeviceId = document.getElementById('vdev-parent-device').value;
+    const parentDeviceId = document.getElementById('vdev-parent-device-value').value || document.getElementById('vdev-parent-device').value;
     const enabled = document.getElementById('vdev-enabled').checked;
     
     if (!parentDeviceId) {
@@ -1466,7 +1595,16 @@ function editVirtualDevice(vdevId) {
             document.getElementById('vdev-name').value = vdev.name;
             document.getElementById('vdev-hwid').value = vdev.hardware_id;
             document.getElementById('vdev-parent-device').value = vdev.parent_device_id;
+            document.getElementById('vdev-parent-device-value').value = vdev.parent_device_id;
             document.getElementById('vdev-enabled').checked = vdev.enabled;
+            
+            // Show selected device
+            const select = document.getElementById('vdev-parent-device');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption) {
+                document.getElementById('vdev-parent-device-selected').style.display = 'block';
+                document.getElementById('vdev-parent-device-name').textContent = selectedOption.textContent;
+            }
             
             // Load tags and pre-select
             handleParentDeviceChange({target: {value: vdev.parent_device_id}});
@@ -1580,6 +1718,10 @@ function resetVirtualDeviceForm() {
     selectedTags.clear();
     
     document.getElementById('add-virtual-device-form').reset();
+    document.getElementById('vdev-parent-device-search').value = '';
+    document.getElementById('vdev-parent-device-value').value = '';
+    document.getElementById('vdev-parent-device').style.display = 'none';
+    document.getElementById('vdev-parent-device-selected').style.display = 'none';
     document.getElementById('vdev-tags-container').style.display = 'none';
     document.getElementById('vdev-submit-btn').innerHTML = '<i class="bi bi-plus-lg"></i> Add Virtual Device';
     document.getElementById('vdev-cancel-btn').style.display = 'none';
