@@ -10,7 +10,7 @@
     --danger-color: #F6490D;    /* Red */
     --light-gray: #f1f5f9;      /* Very light gray */
     --dark-gray: #5b5e63;       /* Medium gray */
-    --text-primary: #0f172a;    /* Dark text */
+    --text-primary: #020202;    /* Dark text */
     --text-secondary: #F6490D;  /* Secondary text */
     --text-muted: #545961;      /* Muted text */
     --border-color: #e2e8f0;    /* Light border */
@@ -65,7 +65,7 @@ body {
 }
 
 .sidebar .nav-link {
-    color: var(--text-primary);
+    color: var(--dark-gray);
     padding: 12px 20px;
     border-radius: 8px;
     margin-bottom: 5px;
@@ -129,7 +129,7 @@ body {
 
 /* Device Lists with Scrolling */
 #devices-list, #virtual-devices-list, #tagmap-container, #live-data-container {
-    max-height: 787px;
+    max-height: 702px;
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -190,6 +190,10 @@ body {
 .tag-type {
     color: var(--text-muted);
     font-size: 0.85rem;
+}
+
+.text-grey-color {
+    color: var(--dark-gray) !important;
 }
 
 /* Stats Cards */
@@ -559,7 +563,6 @@ body {
 
 .bg-light {
     background-color: var(--background) !important;
-    color: var(--text-primary) !important;
 }
 
 /* Text Colors */

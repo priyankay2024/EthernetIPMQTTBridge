@@ -91,6 +91,11 @@ def create_device():
         if isinstance(tags, str):
             tags = [t.strip() for t in tags.split(',') if t.strip()]
         
+        # Get global topic prefix from MQTT config
+        from models import MQTTConfig
+        mqtt_config = MQTTConfig.query.filter_by(is_active=True).first()
+        global_topic_prefix = mqtt_config.topic_prefix if mqtt_config else 'ethernetip/'
+        
         # Create device in database
         device = DeviceService.create_device(
             name=data['name'],
@@ -98,7 +103,7 @@ def create_device():
             slot=int(data.get('slot', 0)),
             hardware_id=data.get('hardware_id'),
             tags=tags,
-            mqtt_topic_prefix=data.get('mqtt_topic_prefix', f"ethernetip/{data['name']}/"),
+            mqtt_topic_prefix=global_topic_prefix,
             mqtt_format=data.get('mqtt_format', 'json'),
             poll_interval=float(data.get('poll_interval', 5.0)),
             enabled=data.get('enabled', True),

@@ -105,9 +105,22 @@ function setupSocketIO() {
     
     socket.on('device_update', (data) => {
         console.log('Device update received:', data);
-        // Update only the changed values, not full re-render
+        
+        // Check if dashboard device list is empty - if so, do full refresh
+        const dashboardContainer = document.getElementById('dashboard-devices-list');
+        const hasDashboardDevices = dashboardContainer && 
+                                   dashboardContainer.querySelector('[data-device-id]');
+        
+        if (!hasDashboardDevices && data.devices && data.devices.length > 0) {
+            // Dashboard is empty but we have devices - do full refresh
+            updateDashboard();
+        } else {
+            // Update only the changed values, not full re-render
+            updateDashboardDeviceListOnly(data.devices);
+        }
+        
+        // Update device list and live data
         updateDeviceValuesOnly(data.devices);
-        updateDashboardDeviceListOnly(data.devices);
         updateDashboardStatsOnly();
         updateLiveDataValuesOnly(data.devices);
     });
@@ -130,6 +143,7 @@ function handleTabChange(event) {
     switch(tabId) {
         case 'dashboard-tab':
             loadDashboard();
+            updateDashboard(); // Refresh device list when viewing dashboard
             break;
         case 'devices-tab':
             // Devices list is already loaded on startup and updated via WebSocket
@@ -164,27 +178,40 @@ function loadDashboard() {
             document.getElementById('stats-total-devices').textContent = data.total_devices || 0;
             document.getElementById('stats-virtual-devices').textContent = data.total_virtual_devices || 0;
             document.getElementById('stats-connected-devices').textContent = data.connected_devices || 0;
-            document.getElementById('stats-total-messages').textContent = data.total_messages || 0;
             
             const lastCommEl = document.getElementById('stats-last-comm');
             if (lastCommEl) {
                 lastCommEl.textContent = data.last_comm_time ? formatDateTime(data.last_comm_time) : 'Never';
             }
             
-            updateMQTTStatusNav(data.mqtt_connected);
+            // updateMQTTStatusNav(data.mqtt_connected);
         })
         .catch(error => console.error('Error loading dashboard:', error));
 }
 
 function updateDashboard() {
     fetch('/api/status')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Dashboard data received:', data); // Debug logging
+            
             // Update MQTT status
-            updateMQTTStatusNav(data.mqtt.connected);
+            if (data.mqtt) {
+                // updateMQTTStatusNav(data.mqtt.connected);
+            }
             
             // Update devices list on dashboard
             const container = document.getElementById('dashboard-devices-list');
+            if (!container) {
+                console.warn('Dashboard devices list container not found');
+                return;
+            }
+            
             if (!data.devices || data.devices.length === 0) {
                 container.innerHTML = '<p class="text-muted text-center py-4">No devices configured</p>';
                 return;
@@ -210,8 +237,15 @@ function updateDashboard() {
             html += '</div>';
             
             container.innerHTML = html;
+            console.log(`Dashboard updated with ${data.devices.length} devices`); // Debug logging
         })
-        .catch(error => console.error('Error updating dashboard:', error));
+        .catch(error => {
+            console.error('Error updating dashboard:', error);
+            const container = document.getElementById('dashboard-devices-list');
+            if (container) {
+                container.innerHTML = '<p class="text-danger text-center py-4">Error loading devices. Please refresh the page.</p>';
+            }
+        });
 }
 
 function updateDashboardStatsOnly() {
@@ -221,7 +255,6 @@ function updateDashboardStatsOnly() {
             // Only update text content, no DOM manipulation
             const totalDevices = document.getElementById('stats-total-devices');
             const connectedDevices = document.getElementById('stats-connected-devices');
-            const totalMessages = document.getElementById('stats-total-messages');
             const lastComm = document.getElementById('stats-last-comm');
             
             if (totalDevices && totalDevices.textContent !== String(data.total_devices || 0)) {
@@ -230,16 +263,12 @@ function updateDashboardStatsOnly() {
             if (connectedDevices && connectedDevices.textContent !== String(data.connected_devices || 0)) {
                 connectedDevices.textContent = data.connected_devices || 0;
             }
-            if (totalMessages && totalMessages.textContent !== String(data.total_messages || 0)) {
-                totalMessages.textContent = data.total_messages || 0;
-            }
-            
             const formattedTime = data.last_comm_time ? formatDateTime(data.last_comm_time) : 'Never';
             if (lastComm && lastComm.textContent !== formattedTime) {
                 lastComm.textContent = formattedTime;
             }
             
-            updateMQTTStatusNav(data.mqtt_connected);
+            // updateMQTTStatusNav(data.mqtt_connected);
         })
         .catch(error => console.error('Error updating dashboard stats:', error));
 }
@@ -267,16 +296,6 @@ function updateDashboardDeviceListOnly(devices) {
     });
 }
 
-function updateMQTTStatusNav(connected) {
-    const statusEl = document.getElementById('mqtt-status-nav');
-    if (connected) {
-        statusEl.className = 'badge bg-success';
-        statusEl.textContent = 'Connected';
-    } else {
-        statusEl.className = 'badge bg-danger';
-        statusEl.textContent = 'Disconnected';
-    }
-}
 
 /**
  * Device functions
@@ -448,7 +467,6 @@ function handleAddDevice(e) {
         slot: parseInt(document.getElementById('device-slot').value),
         hardware_id: document.getElementById('device-hardware-id').value || undefined,
         tags: discoveredTags.length > 0 ? discoveredTags : [],
-        mqtt_topic_prefix: document.getElementById('device-mqtt-prefix').value || undefined,
         mqtt_format: mqttFormat,
         poll_interval: parseFloat(document.getElementById('device-poll-interval').value),
         auto_start: document.getElementById('device-auto-start').checked
@@ -585,7 +603,6 @@ function editDevice(deviceId) {
             document.getElementById('device-host').value = device.host;
             document.getElementById('device-slot').value = device.slot;
             document.getElementById('device-hardware-id').value = device.hardware_id || '';
-            document.getElementById('device-mqtt-prefix').value = device.mqtt_topic_prefix;
             document.getElementById('device-poll-interval').value = device.poll_interval;
             document.getElementById('device-auto-start').checked = device.auto_start;
             
@@ -654,7 +671,7 @@ function resetDeviceForm() {
     
     const submitBtn = document.querySelector('#add-device-form button[type="submit"]');
     submitBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Device';
-    submitBtn.className = 'btn btn-success w-100';
+    submitBtn.className = 'btn btn-info w-100';
     
     // Remove cancel button
     const cancelBtn = document.getElementById('cancel-edit-btn');
@@ -699,6 +716,7 @@ function loadMQTTConfig() {
             document.getElementById('mqtt-client-id').value = data.client_id || '';
             document.getElementById('mqtt-username').value = data.username || '';
             document.getElementById('mqtt-keepalive').value = data.keepalive || 60;
+            document.getElementById('mqtt-topic-prefix').value = data.topic_prefix || 'ethernetip/';
             
             updateMQTTStatus(data.connected);
             document.getElementById('mqtt-current-broker').textContent = 
@@ -716,7 +734,8 @@ function handleMQTTConfig(e) {
         client_id: document.getElementById('mqtt-client-id').value,
         username: document.getElementById('mqtt-username').value,
         password: document.getElementById('mqtt-password').value,
-        keepalive: parseInt(document.getElementById('mqtt-keepalive').value)
+        keepalive: parseInt(document.getElementById('mqtt-keepalive').value),
+        topic_prefix: document.getElementById('mqtt-topic-prefix').value
     };
     
     fetch('/api/mqtt/config', {

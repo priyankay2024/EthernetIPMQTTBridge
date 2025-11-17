@@ -8,8 +8,22 @@ from datetime import datetime
 import uuid
 
 # EthernetIP Client Configuration
-# Import simulator by default - change in production
+# ================================
+# SIMULATOR MODE (Current - for testing without hardware):
 import ethernetip_simulator as client
+
+# PRODUCTION MODE Option 1 - PyLogix (RECOMMENDED for Allen-Bradley PLCs):
+# Uncomment the line below and comment out the simulator import above
+# Install first: pip install pylogix
+# import ethernetip_client_pylogix as client
+
+# PRODUCTION MODE Option 2 - CPPPO (Advanced, requires CIP implementation):
+# Uncomment the line below and comment out the simulator import above
+# Note: list_all_tags() needs manual implementation for real tag discovery
+# import ethernetip_client_real as client
+
+# See PRODUCTION_PLC_SETUP.md for complete setup instructions
+# ================================
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +42,7 @@ class PLCConnection:
         self.poll_interval = poll_interval
         self.hardware_id = hardware_id
         self.mqtt_format = mqtt_format
-        self.mqtt_topic_prefix = mqtt_topic_prefix or f"ethernetip/{name}/"
+        self.mqtt_topic_prefix = mqtt_topic_prefix or f"ethernetip/{hardware_id}/"
         
         self.mqtt_service = mqtt_service
         self.device_service = device_service

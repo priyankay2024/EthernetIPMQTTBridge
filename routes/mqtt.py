@@ -33,6 +33,7 @@ def get_config():
                 'username': mqtt_service.username or '',
                 'has_password': bool(mqtt_service.password),
                 'keepalive': mqtt_service.keepalive or 60,
+                'topic_prefix': 'ethernetip/',
                 'connected': mqtt_service.connected
             })
         
@@ -71,6 +72,7 @@ def update_config():
         config.client_id = data.get('client_id', 'ethernetip_bridge')
         config.username = data.get('username')
         config.keepalive = int(data.get('keepalive', 60))
+        config.topic_prefix = data.get('topic_prefix', 'ethernetip/')
         
         # Only update password if provided
         if 'password' in data and data['password']:

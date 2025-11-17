@@ -16,7 +16,7 @@
             <!-- Left Sidebar with Tabs -->
             <div class="col-md-2 sidebar bg-light border-end">
                 <div class="d-flex flex-column p-3">
-                    <img src="{{ url_for('static', filename='images/tor-cygnus-logo.png') }}" alt="Logo" class="mb-3"
+                    <img src="{{ url_for('static', filename='images/tor-cygnus-logo.png') }}" alt="Logo" class="mb-4"
                         style="width: 100%; height: auto;">
                     <ul class="nav nav-pills flex-column mb-auto" id="sidebar-tabs" role="tablist">
                         <li class="nav-item mb-2">
@@ -28,13 +28,13 @@
                         <li class="nav-item mb-2">
                             <button class="nav-link w-100 text-start" id="devices-tab" data-bs-toggle="tab"
                                 data-bs-target="#devices-view" type="button" role="tab">
-                                <i class="bi bi-hdd-network"></i> Device Configuration
+                                <i class="bi bi-hdd-network"></i> EthernetIP Device Configuration
                             </button>
                         </li>
                         <li class="nav-item mb-2">
-                            <button class="nav-link w-100 text-start" id="mqtt-tab" data-bs-toggle="tab"
-                                data-bs-target="#mqtt-view" type="button" role="tab">
-                                <i class="bi bi-wifi"></i> MQTT Configuration
+                            <button class="nav-link w-100 text-start" id="tagmap-tab" data-bs-toggle="tab"
+                                data-bs-target="#tagmap-view" type="button" role="tab">
+                                <i class="bi bi-tags"></i> EthernetIP Device Tags 
                             </button>
                         </li>
                         <li class="nav-item mb-2">
@@ -44,15 +44,15 @@
                             </button>
                         </li>
                         <li class="nav-item mb-2">
-                            <button class="nav-link w-100 text-start" id="tagmap-tab" data-bs-toggle="tab"
-                                data-bs-target="#tagmap-view" type="button" role="tab">
-                                <i class="bi bi-tags"></i> Tag Map
-                            </button>
-                        </li>
-                        <li class="nav-item mb-2">
                             <button class="nav-link w-100 text-start" id="virtual-devices-tab" data-bs-toggle="tab"
                                 data-bs-target="#virtual-devices-view" type="button" role="tab">
                                 <i class="bi bi-diagram-2"></i> Virtual Device
+                            </button>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <button class="nav-link w-100 text-start" id="mqtt-tab" data-bs-toggle="tab"
+                                data-bs-target="#mqtt-view" type="button" role="tab">
+                                <i class="bi bi-wifi"></i> MQTT Configuration
                             </button>
                         </li>
                     </ul>
@@ -61,22 +61,7 @@
 
             <!-- Main Content Area -->
             <div class="col-md-10 p-0">
-                <!-- Top Navigation Bar -->
-                <!-- <nav class="navbar navbar-expand-lg navbar-dark bg-faint-info">
-                    <div class="container-fluid">
-                        <a class="navbar-brand" href="#">
-                            <i class="bi bi-diagram-3"></i> Dashboard
-                        </a>
-                        <div class="navbar-nav ms-auto">
-                            <span class="navbar-text me-3">
-                                <i class="bi bi-wifi"></i> MQTT:
-                                <span id="mqtt-status-nav" class="badge bg-secondary">Disconnected</span>
-                            </span>
-                        </div>
-                    </div>
-                </nav> -->
                 <div class="p-4">
-
                     <div class="tab-content" id="main-content">
                         <!-- Dashboard View -->
                         <div class="tab-pane fade show active" id="dashboard-view" role="tabpanel">
@@ -100,35 +85,35 @@
                             <!-- Stats Cards -->
                             <div class="row mb-4">
                                 <div class="col-md-3">
-                                    <div class="card text-white bg-info">
+                                    <div class="card bg-light">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-hdd-network"></i> Physical Devices
+                                            <h5 class="text-grey-color">Physical Devices
                                             </h5>
-                                            <h2 class="card-text" id="stats-total-devices">0</h2>
+                                            <h2 class="text-primary" id="stats-total-devices">0</h2>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <div class="card text-white bg-info">
+                                    <div class="card bg-light">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-diagram-2"></i> Virtual Devices</h5>
-                                            <h2 class="card-text" id="stats-virtual-devices">0</h2>
+                                            <h5 class="text-grey-color">Virtual Devices</h5>
+                                            <h2 class="text-primary" id="stats-virtual-devices">0</h2>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <div class="card text-white bg-info">
+                                    <div class="card bg-light">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-check-circle"></i> Connected</h5>
-                                            <h2 class="card-text" id="stats-connected-devices">0</h2>
+                                            <h5 class="text-grey-color">Connected</h5>
+                                            <h2 class="text-primary" id="stats-connected-devices">0</h2>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <div class="card text-white bg-info">
+                                    <div class="card bg-light">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-clock"></i> Last Communication</h5>
-                                            <h2 class="card-text pt-3" id="stats-last-comm" style="font-size: 1.5rem;">
+                                            <h5 class="text-grey-color">Last Communication</h5>
+                                            <h2 class="text-primary pt-3" id="stats-last-comm" style="font-size: 1.2rem;">
                                                 Never
                                             </h2>
                                         </div>
@@ -139,7 +124,7 @@
                             <!-- Connected Devices List -->
                             <div class="card">
                                 <div class="card-header bg-info text-white">
-                                    <h5 class="mb-0"><i class="bi bi-list-ul"></i> Connected Devices</h5>
+                                    <h5 class="mb-0 text-white"><i class="bi bi-list-ul"></i> Connected Devices</h5>
                                 </div>
                                 <div class="card-body">
                                     <div id="dashboard-devices-list">
@@ -149,10 +134,10 @@
                             </div>
                         </div>
 
-                        <!-- Device Configuration View -->
+                        <!-- EthernetIP Device Configuration View -->
                         <div class="tab-pane fade" id="devices-view" role="tabpanel">
                             <div class="navbar-heading d-flex justify-content-between align-items-center">
-                                <h2 class="mb-0"><i class="bi bi-hdd-network"></i> Device Configuration</h2>
+                                <h2 class="mb-0"><i class="bi bi-hdd-network"></i> EthernetIP Device Configuration</h2>
                                 <div class="dropdown">
                                     <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown2" data-bs-toggle="dropdown" aria-expanded="false">
                                         <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
@@ -172,7 +157,7 @@
                                 <div class="col-md-4">
                                     <div class="card">
                                         <div class="card-header bg-info text-white">
-                                            <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add New Device</h5>
+                                            <h5 class="mb-0 text-white"><i class="bi bi-plus-circle"></i> Add New Device</h5>
                                         </div>
                                         <div class="card-body">
                                             <form id="add-device-form">
@@ -209,11 +194,6 @@
                                                     <small class="text-muted" id="tag-discovery-status">Auto-discover
                                                         tags
                                                         from device</small>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label">MQTT Topic Prefix</label>
-                                                    <input type="text" class="form-control" id="device-mqtt-prefix"
-                                                        placeholder="ethernetip/device1/">
                                                 </div>
                                                 <div class="mb-3">
                                                     <label class="form-label">MQTT Publish Format</label>
@@ -261,7 +241,7 @@
                                     <div class="card">
                                         <div
                                             class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                                            <h5 class="mb-0"><i class="bi bi-list"></i> Devices</h5>
+                                            <h5 class="mb-0 text-white"><i class="bi bi-list"></i> Devices</h5>
                                             <div>
                                                 <button class="btn btn-primary btn-sm me-1" id="start-all-devices">
                                                     <i class="bi bi-play-fill"></i> Start All
@@ -272,9 +252,10 @@
                                             </div>
                                         </div>
                                         <div class="card-body">
-                                            <div class="mb-3">
-                                                <input type="text" class="form-control" id="device-search-input"
-                                                    placeholder="🔍 Search by name, HWID, or IP address...">
+                                            <div class="mb-3 position-relative">
+                                                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                                                <input type="text" class="form-control ps-5" id="device-search-input"
+                                                    placeholder="Search by name, HWID, or IP address...">
                                             </div>
                                             <div id="devices-list">
                                                 <p class="text-muted text-center py-4">No devices configured</p>
@@ -307,7 +288,7 @@
                                 <div class="col-md-6">
                                     <div class="card">
                                         <div class="card-header bg-info text-white">
-                                            <h5 class="mb-0"><i class="bi bi-gear"></i> Broker Settings</h5>
+                                            <h5 class="mb-0 text-white"><i class="bi bi-gear"></i> Broker Settings</h5>
                                         </div>
                                         <div class="card-body">
                                             <form id="mqtt-config-form">
@@ -337,6 +318,12 @@
                                                     <input type="number" class="form-control" id="mqtt-keepalive"
                                                         value="60">
                                                 </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Topic Prefix</label>
+                                                    <input type="text" class="form-control" id="mqtt-topic-prefix"
+                                                        value="ethernetip/" placeholder="ethernetip/">
+                                                    <small class="text-muted">Base topic prefix for all devices (e.g., ethernetip/)</small>
+                                                </div>
                                                 <button type="submit" class="btn btn-info w-100">
                                                     <i class="bi bi-save"></i> Save Configuration
                                                 </button>
@@ -348,7 +335,7 @@
                                 <div class="col-md-6">
                                     <div class="card">
                                         <div class="card-header bg-info text-white">
-                                            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Connection Status</h5>
+                                            <h5 class="mb-0 text-white"><i class="bi bi-info-circle"></i> Connection Status</h5>
                                         </div>
                                         <div class="card-body">
                                             <div class="mb-3">
@@ -400,12 +387,13 @@
                             </div>
                             <div class="card">
                                 <div class="card-header bg-info text-white">
-                                    <h5 class="mb-0"><i class="bi bi-activity"></i> Real-Time Tag Values</h5>
+                                    <h5 class="mb-0 text-white"><i class="bi bi-activity"></i> Real-Time Tag Values</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="mb-3">
-                                        <input type="text" class="form-control" id="livedata-search-input"
-                                            placeholder="🔍 Search by device name, HWID, or tag name...">
+                                    <div class="mb-3 position-relative">
+                                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                                        <input type="text" class="form-control ps-5" id="livedata-search-input"
+                                            placeholder="Search by device name, HWID, or tag name...">
                                     </div>
                                     <div id="live-data-container">
                                         <p class="text-muted text-center py-4">No live data available</p>
@@ -417,7 +405,7 @@
                         <!-- Tag Map View -->
                         <div class="tab-pane fade" id="tagmap-view" role="tabpanel">
                             <div class="navbar-heading d-flex justify-content-between align-items-center">
-                                <h2 class="mb-0"><i class="bi bi-tags"></i> Tag Map</h2>
+                                <h2 class="mb-0"><i class="bi bi-tags"></i> EthernetIP Device Tags</h2>
                                 <div class="dropdown">
                                     <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown5" data-bs-toggle="dropdown" aria-expanded="false">
                                         <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
@@ -434,12 +422,13 @@
                             </div>
                             <div class="card">
                                 <div class="card-header bg-info text-white">
-                                    <h5 class="mb-0"><i class="bi bi-diagram-3"></i> All Tags by Device</h5>
+                                    <h5 class="mb-0 text-white"><i class="bi bi-diagram-3"></i> All Tags by Device</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="mb-3">
-                                        <input type="text" class="form-control" id="tagmap-search-input"
-                                            placeholder="🔍 Search by device name, HWID, or tag name...">
+                                    <div class="mb-3 position-relative">
+                                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                                        <input type="text" class="form-control ps-5" id="tagmap-search-input"
+                                            placeholder="Search by device name, HWID, or tag name...">
                                     </div>
                                     <div id="tagmap-container">
                                         <p class="text-muted text-center py-4">No tags configured</p>
@@ -448,10 +437,10 @@
                             </div>
                         </div>
 
-                        <!-- Virtual Device Mapping View -->
+                        <!-- Virtual Device View -->
                         <div class="tab-pane fade" id="virtual-devices-view" role="tabpanel">
                             <div class="navbar-heading d-flex justify-content-between align-items-center">
-                                <h2 class="mb-0"><i class="bi bi-diagram-2"></i> Virtual Device Mapping</h2>
+                                <h2 class="mb-0"><i class="bi bi-diagram-2"></i> Virtual Device</h2>
                                 <div class="dropdown">
                                     <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown6" data-bs-toggle="dropdown" aria-expanded="false">
                                         <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
@@ -471,7 +460,7 @@
                                 <div class="col-md-4">
                                     <div class="card">
                                         <div class="card-header bg-info text-white">
-                                            <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Virtual Device</h5>
+                                            <h5 class="mb-0 text-white"><i class="bi bi-plus-circle"></i> Add Virtual Device</h5>
                                         </div>
                                         <div class="card-body">
                                             <form id="add-virtual-device-form">
@@ -556,12 +545,13 @@
                                 <div class="col-md-8">
                                     <div class="card">
                                         <div class="card-header bg-info text-white">
-                                            <h5 class="mb-0"><i class="bi bi-list"></i> Virtual Devices</h5>
+                                            <h5 class="mb-0 text-white"><i class="bi bi-list"></i> Virtual Devices</h5>
                                         </div>
                                         <div class="card-body">
-                                            <div class="mb-3">
-                                                <input type="text" class="form-control" id="vdev-search-input"
-                                                    placeholder="🔍 Search by name, HWID, or parent device...">
+                                            <div class="mb-3 position-relative">
+                                                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                                                <input type="text" class="form-control ps-5" id="vdev-search-input"
+                                                    placeholder="Search by name, HWID, or parent device...">
                                             </div>
                                             <div id="virtual-devices-list">
                                                 <p class="text-muted text-center py-4">No virtual devices configured</p>

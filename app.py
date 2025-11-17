@@ -83,6 +83,7 @@ def initialize_app():
                 username=app.config.get('MQTT_USERNAME'),
                 password=app.config.get('MQTT_PASSWORD'),
                 keepalive=app.config['MQTT_KEEPALIVE'],
+                topic_prefix='ethernetip/',
                 is_active=True
             )
             db.session.add(mqtt_config)

@@ -31,6 +31,7 @@ class MockEthernetIPClient:
             'Voltage': 220.5
         }
         self.connected = False
+        self.host = None
     
     def update_values(self):
         """Update tag values to simulate realistic changes"""
@@ -47,12 +48,13 @@ class MockEthernetIPClient:
     
     def connector(self, host, timeout=5.0):
         """Mock connector context manager"""
+        self.host = host
         return self
     
     def __enter__(self):
         """Context manager entry"""
         self.connected = True
-        print(f"[SIMULATOR] Connected to mock PLC at 127.0.0.1")
+        print(f"[SIMULATOR] Connected to mock PLC at {self.host}")
         return self
     
     def __exit__(self, *args):
@@ -166,7 +168,7 @@ if __name__ == '__main__':
     # Simulate reading tags
     tags_to_read = ['Tag1', 'Tag2', 'Temperature', 'NonExistentTag']
     
-    with client.connector('127.0.0.1') as connection:
+    with client.connector('192.168.21.48') as connection:   # Change IP (host) as needed
         operations = client.parse_operations(tags_to_read)
         
         for index, descr, op, reply, status, value in connection.synchronous(operations):

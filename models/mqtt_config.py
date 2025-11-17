@@ -16,6 +16,7 @@ class MQTTConfig(db.Model):
     username = db.Column(db.String(100))
     password = db.Column(db.String(200))
     keepalive = db.Column(db.Integer, default=60)
+    topic_prefix = db.Column(db.String(200), default='ethernetip/')
     is_active = db.Column(db.Boolean, default=True)
     
     # Connection status (not persisted, updated at runtime)
@@ -35,6 +36,7 @@ class MQTTConfig(db.Model):
             'username': self.username,
             'has_password': bool(self.password),
             'keepalive': self.keepalive,
+            'topic_prefix': self.topic_prefix,
             'is_active': self.is_active,
             'last_connected': self.last_connected.isoformat() if self.last_connected else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
