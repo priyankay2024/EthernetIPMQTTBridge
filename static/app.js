@@ -82,7 +82,6 @@ function setupEventListeners() {
     document.getElementById('mqtt-config-form').addEventListener('submit', handleMQTTConfig);
     document.getElementById('mqtt-connect-btn').addEventListener('click', connectMQTT);
     document.getElementById('mqtt-disconnect-btn').addEventListener('click', disconnectMQTT);
-    document.getElementById('mqtt-test-btn').addEventListener('click', testMQTTConnection);
     
     // Tab changes
     document.querySelectorAll('#sidebar-tabs button').forEach(button => {
@@ -362,7 +361,7 @@ function createDeviceCard(device) {
                 <div class="row">
                     <div class="col-md-6">
                         <small><strong>Hardware ID (HWID):</strong> ${device.hardware_id || 'Not set'}</small><br>
-                        <small><strong>MQTT Topic:</strong> ${device.mqtt_topic_prefix}</small><br>
+                        <small><strong>MQTT Topic:</strong> ${device.mqtt_topic_prefix}${device.hardware_id}</small><br>
                         <small><strong>Poll Interval:</strong> ${device.poll_interval}s</small><br>
                         <small><strong>Messages:</strong> <span class="device-msg-count">${device.message_count || 0}</span></small>
                     </div>
@@ -764,12 +763,20 @@ function connectMQTT() {
         .then(data => {
             if (data.success) {
                 showAlert('success', 'Connected to MQTT broker');
-                loadMQTTConfig();
+                // Update status immediately
+                updateMQTTStatus(true);
+                // Then reload full config to get any other updates
+                setTimeout(() => loadMQTTConfig(), 500);
             } else {
-                showAlert('danger', 'Failed to connect: ' + data.error);
+                showAlert('danger', 'Failed to connect: ' + (data.error || 'Unknown error'));
+                updateMQTTStatus(false);
             }
         })
-        .catch(error => console.error('Error connecting to MQTT:', error));
+        .catch(error => {
+            console.error('Error connecting to MQTT:', error);
+            showAlert('danger', 'Error connecting to MQTT broker');
+            updateMQTTStatus(false);
+        });
 }
 
 function disconnectMQTT() {
@@ -778,47 +785,53 @@ function disconnectMQTT() {
         .then(data => {
             if (data.success) {
                 showAlert('info', 'Disconnected from MQTT broker');
-                loadMQTTConfig();
+                // Update status immediately
+                updateMQTTStatus(false);
+                // Then reload full config
+                setTimeout(() => loadMQTTConfig(), 500);
             }
         })
-        .catch(error => console.error('Error disconnecting from MQTT:', error));
+        .catch(error => {
+            console.error('Error disconnecting from MQTT:', error);
+            showAlert('danger', 'Error disconnecting from MQTT broker');
+        });
 }
 
-function testMQTTConnection() {
-    const configData = {
-        broker: document.getElementById('mqtt-broker').value,
-        port: parseInt(document.getElementById('mqtt-port').value),
-        client_id: document.getElementById('mqtt-client-id').value,
-        username: document.getElementById('mqtt-username').value,
-        password: document.getElementById('mqtt-password').value
-    };
+// function testMQTTConnection() {
+//     const configData = {
+//         broker: document.getElementById('mqtt-broker').value,
+//         port: parseInt(document.getElementById('mqtt-port').value),
+//         client_id: document.getElementById('mqtt-client-id').value,
+//         username: document.getElementById('mqtt-username').value,
+//         password: document.getElementById('mqtt-password').value
+//     };
     
-    const btn = document.getElementById('mqtt-test-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing...';
+//     const btn = document.getElementById('mqtt-test-btn');
+//     btn.disabled = true;
+//     btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing...';
     
-    fetch('/api/mqtt/test', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(configData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showAlert('success', 'Connection test successful!');
-        } else {
-            showAlert('danger', 'Connection test failed: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error testing MQTT connection:', error);
-        showAlert('danger', 'Error testing connection');
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-check2-circle"></i> Test Connection';
-    });
-}
+//     fetch('/api/mqtt/test', {
+//         method: 'POST',
+//         headers: {'Content-Type': 'application/json'},
+//         body: JSON.stringify(configData)
+//     })
+//     .then(response => response.json())
+//     .then(data => {
+//         if (data.success) {
+//             showAlert('success', 'Connection test successful!');
+//         } else {
+//             showAlert('danger', 'Connection test failed: ' + data.error);
+//         }
+//     })
+//     .catch(error => {
+//         console.error('Error testing MQTT connection:', error);
+//         showAlert('danger', 'Error testing connection');
+//     })
+//     .finally(() => {
+//         btn.disabled = false;
+//         btn.innerHTML = '<i class="bi bi-check2-circle"></i> Test Connection';
+//     });
+// }
 
 function updateMQTTStatus(connected) {
     const statusEl = document.getElementById('mqtt-connection-status');
